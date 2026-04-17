@@ -1,0 +1,70 @@
+{
+  "kpis": {
+    "totalStudents": 3842,
+    "totalStudentsChange": "+12%",
+    "totalTeachers": 248,
+    "totalTeachersChange": "+3 joins",
+    "penSessionsToday": 187,
+    "penSessionsLive": 6,
+    "studentsAtRisk": 12
+  },
+  "alerts": [
+    {
+      "id": 1,
+      "studentName": "Tanya M.",
+      "text": "9m 40s hesitation. Writing speed ↓ 88%.",
+      "context": "Grade 10-A • Mathematics",
+      "timeAgo": "2 min ago",
+      "severity": "high"
+    },
+    {
+      "id": 2,
+      "studentName": "Rahul V.",
+      "text": "Attempted Q4 three times, crossed out each time.",
+      "context": "Grade 10-A • Mathematics",
+      "timeAgo": "8 min ago",
+      "severity": "medium"
+    },
+    {
+      "id": 3,
+      "studentName": "Vivaan T.",
+      "text": "Full writing stop for 2:55 on integration problem.",
+      "context": "Grade 10-A • Mathematics",
+      "timeAgo": "11 min ago",
+      "severity": "medium"
+    }
+  ],
+  "demographics": [
+    { "name": "Male", "value": 2104 },
+    { "name": "Female", "value": 1738 }
+  ],
+  "teachers": [
+    { "id": 1, "name": "Dr. Amara Singh", "avatar": "AS", "color": "#8b5cf6", "subject": "Physics", "class": "10-A", "joined": "Mar 2019", "email": "a.singh@notivo.edu", "salary": "$4,800", "status": "Active" },
+    { "id": 2, "name": "Mr. Leon Carter", "avatar": "LC", "color": "#3b82f6", "subject": "Mathematics", "class": "9-B", "joined": "Jul 2018", "email": "l.carter@notivo.edu", "salary": "$4,200", "status": "Active" },
+    { "id": 3, "name": "Ms. Priya Mehta", "avatar": "PM", "color": "#22c55e", "subject": "Chemistry", "class": "11-C", "joined": "Jan 2021", "email": "p.mehta@notivo.edu", "salary": "$4,500", "status": "On Leave" },
+    { "id": 4, "name": "Mr. James Okafor", "avatar": "JO", "color": "#f59e0b", "subject": "English", "class": "8-A", "joined": "Aug 2017", "email": "j.okafor@notivo.edu", "salary": "$3,900", "status": "Active" },
+    { "id": 5, "name": "Dr. Sofia Reyes", "avatar": "SR", "color": "#f43f5e", "subject": "Biology", "class": "12-B", "joined": "Jun 2020", "email": "s.reyes@notivo.edu", "salary": "$5,100", "status": "Active" }
+  ],
+  "students": [
+    { "id": 1, "name": "Aria Sharma", "avatar": "AS", "color": "#8b5cf6", "roll": "101", "class": "10-A", "section": "A", "parent": "Raj Sharma", "fees": "Paid", "status": "Active" },
+    { "id": 2, "name": "Ben Okafor", "avatar": "BO", "color": "#3b82f6", "roll": "102", "class": "10-A", "section": "A", "parent": "Ife Okafor", "fees": "Due", "status": "Active" },
+    { "id": 3, "name": "Clara Kim", "avatar": "CK", "color": "#22c55e", "roll": "103", "class": "10-A", "section": "A", "parent": "Jin Kim", "fees": "Paid", "status": "Active" },
+    { "id": 4, "name": "Daniel Patel", "avatar": "DP", "color": "#f59e0b", "roll": "11-C", "section": "C", "parent": "Amit Patel", "fees": "Paid", "status": "Active" }
+  ],
+  "employees": [
+    { "id": 1, "name": "Mr. Frank Nkosi", "avatar": "FN", "color": "#8b5cf6", "dept": "Administration", "role": "Principal", "joined": "Jan 2010", "contact": "fnkosi@notivo.edu", "salary": "$8,200", "status": "Active" },
+    { "id": 2, "name": "Ms. Helen Rao", "avatar": "HR", "color": "#3b82f6", "dept": "Finance", "role": "Accountant", "joined": "Mar 2015", "contact": "hrao@notivo.edu", "salary": "$4,100", "status": "Active" },
+    { "id": 3, "name": "Mr. Ivan Torres", "avatar": "IT", "color": "#f59e0b", "dept": "IT", "role": "Sys Admin", "joined": "Jul 2019", "contact": "itorres@notivo.edu", "salary": "$5,200", "status": "Active" }
+  ],
+  "timetable": [
+    { "period": "1", "time": "08:30 - 09:15", "mon": "Maths", "tue": "English", "wed": "Physics", "thu": "Chemistry", "fri": "Biology" },
+    { "period": "2", "time": "09:15 - 10:00", "mon": "Physics", "tue": "Maths", "wed": "English", "thu": "Biology", "fri": "Lab" },
+    { "period": "3", "time": "10:00 - 10:45", "mon": "Break", "tue": "Break", "wed": "Break", "thu": "Break", "fri": "Break" }
+  ],
+  "weakConceptAnalytics": [
+    { "topic": "Calculus", "score": 39, "students": 12 },
+    { "topic": "Organic Chem", "score": 48, "students": 8 },
+    { "topic": "Modern History", "score": 72, "students": 3 },
+    { "topic": "Probability", "score": 55, "students": 15 }
+  ]
+}

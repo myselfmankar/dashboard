@@ -1,0 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=DM+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #1A1A1A;
+  --color-accent: #F47B20;
+  --color-s50: #faf9f7;
+  --color-s100: #f1f5f9;
+  --color-s200: #e2e8f0;
+  --color-s400: #94a3b8;
+  --color-s500: #64748b;
+  --color-s700: #334155;
+  --color-s800: #1e293b;
+  --color-s900: #111110;
+  
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --font-headline: 'Anton', sans-serif;
+  --font-serif: 'Cormorant Garamond', serif;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-s50);
+  color: var(--color-s900);
+}
+
+* {
+  box-sizing: border-box;
+}

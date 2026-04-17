@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { BookOpen, Users, TrendingUp, TrendingDown, ClipboardList } from 'lucide-react';
+import { useState } from 'react';
+import { BookOpen, Users, TrendingUp, ClipboardList } from 'lucide-react';
 import { KpiItem } from '../components/KpiItem';
 
 const hmStudents = [

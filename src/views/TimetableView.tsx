@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 export function TimetableView() {
   const [grade, setGrade] = useState('Grade 10-A');

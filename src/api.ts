@@ -1,4 +1,5 @@
 import axios from 'axios';
+import localDb from '../db.json';
 
 const BASE_URL = 'http://localhost:3001';
 
@@ -8,35 +9,27 @@ const client = axios.create({
 
 export const api = {
   getKpis: async () => {
-    const { data } = await client.get('/kpis');
-    return data;
+    try { const { data } = await client.get('/kpis'); return data; } catch(e) { return (localDb as any).kpis; }
   },
   getAlerts: async () => {
-    const { data } = await client.get('/alerts');
-    return data;
+    try { const { data } = await client.get('/alerts'); return data; } catch(e) { return (localDb as any).alerts; }
   },
   getDemographics: async () => {
-    const { data } = await client.get('/demographics');
-    return data;
+    try { const { data } = await client.get('/demographics'); return data; } catch(e) { return (localDb as any).demographics; }
   },
   getTeachers: async () => {
-    const { data } = await client.get('/teachers');
-    return data;
+    try { const { data } = await client.get('/teachers'); return data; } catch(e) { return (localDb as any).teachers; }
   },
   getStudents: async () => {
-    const { data } = await client.get('/students');
-    return data;
+    try { const { data } = await client.get('/students'); return data; } catch(e) { return (localDb as any).students; }
   },
   getEmployees: async () => {
-    const { data } = await client.get('/employees');
-    return data;
+    try { const { data } = await client.get('/employees'); return data; } catch(e) { return (localDb as any).employees; }
   },
   getTimetable: async () => {
-    const { data } = await client.get('/timetable');
-    return data;
+    try { const { data } = await client.get('/timetable'); return data; } catch(e) { return (localDb as any).timetable; }
   },
   getWeakConcepts: async () => {
-    const { data } = await client.get('/weakConceptAnalytics');
-    return data;
+    try { const { data } = await client.get('/weakConceptAnalytics'); return data; } catch(e) { return (localDb as any).weakConceptAnalytics; }
   }
 };

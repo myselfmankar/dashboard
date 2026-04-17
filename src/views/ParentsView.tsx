@@ -1,4 +1,3 @@
-import React from 'react';
 import { Calendar, FileText, CheckCircle, Download, Eye, AlertTriangle, Users } from 'lucide-react';
 
 export function ParentsView() {

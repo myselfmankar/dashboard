@@ -1,5 +1,4 @@
-import React from 'react';
-import { Layers, Users, TrendingUp, Plus, Clock, BookOpen } from 'lucide-react';
+import { Layers, Users, TrendingUp, Plus, BookOpen } from 'lucide-react';
 import { KpiItem } from '../components/KpiItem';
 
 export function CoursesView() {

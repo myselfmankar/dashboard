@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { HashRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { 
-  Users, UserCheck, BookOpen, Clock, 
+  UserCheck, BookOpen, Clock, 
   Settings, Bell, Search, Menu, PenTool,
   LayoutDashboard, School
 } from 'lucide-react';
@@ -14,8 +14,9 @@ import { TimetableView } from './views/TimetableView';
 import { CoursesView } from './views/CoursesView';
 import { NotificationsView } from './views/NotificationsView';
 import { SettingsView } from './views/SettingsView';
+import { LoginView } from './views/LoginView';
 
-function PageLayout({ children }: { children: React.ReactNode }) {
+function PageLayout({ children, onLogout }: { children: React.ReactNode, onLogout: () => void }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -55,11 +56,15 @@ function PageLayout({ children }: { children: React.ReactNode }) {
             <SidebarLink to="/analytics" icon={<PenTool size={16}/>} label="Pen Analytics" badge="NEW" activeBadge />
           </nav>
 
-          <div className="border-t border-white/10 p-3 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-[11px] font-bold shrink-0">SA</div>
+          <div 
+            className="border-t border-white/10 p-3 flex items-center gap-3 cursor-pointer hover:bg-white/5 transition-colors"
+            onClick={onLogout}
+            title="Click to Logout"
+          >
+            <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-[11px] font-bold shrink-0 shadow-lg shadow-accent/20">SA</div>
             <div>
               <div className="text-xs font-semibold text-s100">Super Admin</div>
-              <div className="text-[10px] text-s500">CTO Dashboard</div>
+              <div className="text-[10px] text-s500 uppercase tracking-widest font-mono">Sign Out</div>
             </div>
           </div>
         </div>
@@ -112,21 +117,53 @@ function SidebarLink({ to, icon, label, badge, activeBadge }: any) {
 }
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const auth = localStorage.getItem('notivo_auth');
+    setIsAuthenticated(auth === 'true');
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('notivo_auth');
+    setIsAuthenticated(false);
+  };
+
+  if (isAuthenticated === null) return null; // Wait for hydration
+
   return (
-    <BrowserRouter>
-      <PageLayout>
-        <Routes>
-          <Route path="/" element={<DashboardView />} />
-          <Route path="/parents" element={<ParentsView />} />
-          <Route path="/teachers" element={<TeachersView />} />
-          <Route path="/timetable" element={<TimetableView />} />
-          <Route path="/courses" element={<CoursesView />} />
-          <Route path="/notifications" element={<NotificationsView />} />
-          <Route path="/settings" element={<SettingsView />} />
-          <Route path="/analytics" element={<AnalyticsView />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </PageLayout>
-    </BrowserRouter>
+    <HashRouter>
+      <Routes>
+        <Route 
+          path="/login" 
+          element={
+            isAuthenticated ? <Navigate to="/" replace /> : <LoginView onLogin={() => setIsAuthenticated(true)} />
+          } 
+        />
+        
+        <Route 
+          path="/*" 
+          element={
+            isAuthenticated ? (
+              <PageLayout onLogout={handleLogout}>
+                <Routes>
+                  <Route path="/" element={<DashboardView />} />
+                  <Route path="/parents" element={<ParentsView />} />
+                  <Route path="/teachers" element={<TeachersView />} />
+                  <Route path="/timetable" element={<TimetableView />} />
+                  <Route path="/courses" element={<CoursesView />} />
+                  <Route path="/notifications" element={<NotificationsView />} />
+                  <Route path="/settings" element={<SettingsView />} />
+                  <Route path="/analytics" element={<AnalyticsView />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </PageLayout>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } 
+        />
+      </Routes>
+    </HashRouter>
   );
 }

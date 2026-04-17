@@ -1,5 +1,4 @@
-import React from 'react';
-import { Bell, Check, AlertCircle, Info, Megaphone, Calendar } from 'lucide-react';
+import { Check, AlertCircle, Info, Megaphone, Calendar } from 'lucide-react';
 
 export function NotificationsView() {
   const recentAlerts = [

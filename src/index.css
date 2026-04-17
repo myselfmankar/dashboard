@@ -31,3 +31,181 @@ body {
 * {
   box-sizing: border-box;
 }
+
+/* Login Specific Styles (Translated from Prototype) */
+.login-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0a;
+  overflow: hidden;
+}
+
+.login-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, #222 0%, #000 70%);
+  opacity: 0.6;
+}
+
+.login-card {
+  position: relative;
+  z-index: 10;
+  width: 420px;
+  max-width: 94vw;
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 24px;
+  padding: 40px 36px 36px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.55);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  justify-content: center;
+}
+
+.login-brand-ic {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #FFAA6E, #F47B20);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.login-brand-name {
+  font-family: 'Anton', sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.1em;
+  color: #fff;
+  line-height: 1;
+}
+
+.login-brand-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: #FFAA6E;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+
+.login-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.login-sub {
+  font-size: 12px;
+  color: #64748b;
+  text-align: center;
+  margin-bottom: 28px;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.03em;
+}
+
+.login-field {
+  margin-bottom: 16px;
+}
+
+.login-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 6px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-family: 'DM Mono', monospace;
+}
+
+.login-input {
+  width: 100%;
+  padding: 11px 14px;
+  background: #111110 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 11px;
+  font-size: 13px;
+  color: #f1f5f9 !important;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.login-input:focus {
+  border-color: #F47B20;
+  box-shadow: 0 0 0 3px rgba(244, 123, 32, 0.18);
+}
+
+.login-pwd-wrap {
+  position: relative;
+}
+
+.login-eye {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-btn {
+  width: 100%;
+  background: #F47B20;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: transform 0.1s, opacity 0.2s;
+}
+
+.login-btn:active {
+  transform: scale(0.98);
+}
+
+.login-btn:hover {
+  opacity: 0.9;
+}
+
+.login-err {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.login-footer {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 10px;
+  color: #334155;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.06em;
+}

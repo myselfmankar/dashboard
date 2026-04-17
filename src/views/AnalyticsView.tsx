@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { Sparkles, AlertTriangle, AlertCircle, BarChart as BarChartIcon, MonitorPlay } from 'lucide-react';
 import { KpiItem } from '../components/KpiItem';

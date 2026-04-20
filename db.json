@@ -35,8 +35,16 @@
     }
   ],
   "demographics": [
-    { "name": "Male", "value": 2104 },
-    { "name": "Female", "value": 1738 }
+    { "label": "Male", "value": 2104 },
+    { "label": "Female", "value": 1738 }
+  ],
+  "attendance": [
+    { "day": "Mon", "present": 345, "absent": 55 },
+    { "day": "Tue", "present": 370, "absent": 30 },
+    { "day": "Wed", "present": 355, "absent": 45 },
+    { "day": "Thu", "present": 380, "absent": 20 },
+    { "day": "Fri", "present": 330, "absent": 70 },
+    { "day": "Sat", "present": 290, "absent": 110 }
   ],
   "teachers": [
     { "id": 1, "name": "Dr. Amara Singh", "avatar": "AS", "color": "#8b5cf6", "subject": "Physics", "class": "10-A", "joined": "Mar 2019", "email": "a.singh@notivo.edu", "salary": "$4,800", "status": "Active" },
@@ -62,9 +70,26 @@
     { "period": "3", "time": "10:00 - 10:45", "mon": "Break", "tue": "Break", "wed": "Break", "thu": "Break", "fri": "Break" }
   ],
   "weakConceptAnalytics": [
-    { "topic": "Calculus", "score": 39, "students": 12 },
-    { "topic": "Organic Chem", "score": 48, "students": 8 },
-    { "topic": "Modern History", "score": 72, "students": 3 },
-    { "topic": "Probability", "score": 55, "students": 15 }
+    { "topic": "Integration by Parts", "score": 39, "subject": "Mathematics", "grade": "10" },
+    { "topic": "Organic Reactions", "score": 48, "subject": "Chemistry", "grade": "11" },
+    { "topic": "Derivatives", "score": 72, "subject": "Mathematics", "grade": "10" },
+    { "topic": "Probability", "score": 55, "subject": "Mathematics", "grade": "9" },
+    { "topic": "Electromagnetic Induction", "score": 44, "subject": "Physics", "grade": "12" },
+    { "topic": "Trigonometric Identities", "score": 61, "subject": "Mathematics", "grade": "10" }
+  ],
+  "teacherPerformance": [
+    { "name": "Dr. Amara Singh", "issues": 12, "total": 35, "avgScore": 68 },
+    { "name": "Mr. Leon Carter", "issues": 8, "total": 32, "avgScore": 74 },
+    { "name": "Ms. Priya Mehta", "issues": 5, "total": 30, "avgScore": 79 },
+    { "name": "Mr. James Okafor", "issues": 3, "total": 28, "avgScore": 82 },
+    { "name": "Dr. Sofia Reyes", "issues": 2, "total": 26, "avgScore": 85 }
+  ],
+  "courses": [
+    { "name": "Advanced Mathematics", "code": "MAT-301", "teacher": "Leon Carter", "students": 120, "progress": 85, "color": "blue" },
+    { "name": "Introduction to Physics", "code": "PHY-101", "teacher": "Amara Singh", "students": 85, "progress": 60, "color": "purple" },
+    { "name": "Organic Chemistry", "code": "CHE-202", "teacher": "Priya Mehta", "students": 65, "progress": 92, "color": "green" },
+    { "name": "World History", "code": "HIS-105", "teacher": "John Doe", "students": 140, "progress": 45, "color": "orange" },
+    { "name": "Computer Science 101", "code": "CS-101", "teacher": "Ivan Torres", "students": 200, "progress": 30, "color": "cyan" },
+    { "name": "English Literature", "code": "ENG-201", "teacher": "James Okafor", "students": 90, "progress": 78, "color": "pink" }
   ]
 }

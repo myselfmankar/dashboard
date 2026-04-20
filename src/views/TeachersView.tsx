@@ -55,7 +55,7 @@ export function TeachersView() {
         {/* Welcome Banner */}
         <div className="bg-gradient-to-br from-[#FFE8D0] to-white border border-[#FFD4A8] rounded-2xl p-6 relative overflow-hidden shadow-sm">
           <div className="relative z-10">
-            <h2 className="text-3xl font-headline tracking-tighter text-s900 mb-2">Welcome Back, <span className="text-accent italic">Tiana!</span></h2>
+            <h2 className="text-3xl font-headline tracking-wide text-s900 mb-2">Welcome Back, <span className="text-accent font-serif italic">Tiana!</span></h2>
             <p className="text-sm font-semibold text-s600">Your students completed <strong className="text-s900">80%</strong> of the tasks.</p>
             <p className="text-sm font-semibold text-s600">Progress is <span className="text-green-600 bg-green-100 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider">very good!</span></p>
           </div>

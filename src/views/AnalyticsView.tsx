@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { Sparkles, AlertTriangle, AlertCircle, BarChart as BarChartIcon, MonitorPlay } from 'lucide-react';
 import { KpiItem } from '../components/KpiItem';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import type { WeakConcept, HeatmapStudent } from '../types';
 
 const hmStudents = [
   {name:"Aarav S.",risk:0,score:91},
@@ -39,9 +41,9 @@ const hmStudents = [
 ];
 
 export function AnalyticsView() {
-  const [concepts, setConcepts] = useState<any[]>([]);
+  const [concepts, setConcepts] = useState<WeakConcept[]>([]);
 
-  const allStudents = [...hmStudents, ...hmStudents.slice(0, 8)];
+  const allStudents: HeatmapStudent[] = [...hmStudents, ...hmStudents.slice(0, 8)] as HeatmapStudent[];
 
   useEffect(() => {
     api.getWeakConcepts().then(setConcepts).catch(console.error);
@@ -131,18 +133,53 @@ export function AnalyticsView() {
              <p className="text-xs text-s500 mt-1">Mathematics • Grade 10 • Today</p>
            </div>
            
-           <div className="flex flex-col gap-3 flex-1">
-             {concepts.slice(0,4).map((c, i) => (
-               <div key={i}>
-                 <div className="flex justify-between text-xs font-bold text-s700 mb-1">
-                   <span>{c.topic}</span>
-                   <span className="text-orange-600">{c.score}% Error Rate</span>
-                 </div>
-                 <div className="w-full bg-orange-50 h-2 rounded-full overflow-hidden">
-                   <div className="bg-orange-500 h-full rounded-full" style={{ width: `${c.score}%` }} />
-                 </div>
-               </div>
-             ))}
+           <div className="flex flex-col flex-1">
+             {concepts.length > 0 ? (
+               <ResponsiveContainer width="100%" height={concepts.slice(0, 4).length * 44 + 20}>
+                 <BarChart
+                   data={concepts.slice(0, 4)}
+                   layout="vertical"
+                   barSize={10}
+                   margin={{ top: 0, right: 40, left: 10, bottom: 0 }}
+                 >
+                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                   <XAxis
+                     type="number"
+                     domain={[0, 100]}
+                     tick={{ fontSize: 9, fill: '#94a3b8', fontFamily: 'DM Mono, monospace' }}
+                     tickLine={false}
+                     axisLine={false}
+                     unit="%"
+                   />
+                   <YAxis
+                     type="category"
+                     dataKey="topic"
+                     tick={{ fontSize: 11, fill: '#334155', fontWeight: 600 }}
+                     tickLine={false}
+                     axisLine={false}
+                     width={120}
+                   />
+                   <Tooltip
+                     contentStyle={{
+                       background: '#fff',
+                       border: '1px solid #e2e8f0',
+                       borderRadius: 10,
+                       fontSize: 11,
+                       fontWeight: 600,
+                       boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                     }}
+                     formatter={(value: number) => [`${value}%`, 'Error Rate']}
+                   />
+                   <Bar dataKey="score" radius={[0, 4, 4, 0]}>
+                     {concepts.slice(0, 4).map((_: WeakConcept, i: number) => (
+                       <Cell key={i} fill={i === 0 ? '#ef4444' : i === 1 ? '#f97316' : '#f59e0b'} />
+                     ))}
+                   </Bar>
+                 </BarChart>
+               </ResponsiveContainer>
+             ) : (
+               <div className="flex-1 flex items-center justify-center text-xs text-s400 font-mono">Loading concepts...</div>
+             )}
            </div>
 
            {/* AI Box */}

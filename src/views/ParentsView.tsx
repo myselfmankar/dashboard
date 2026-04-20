@@ -1,4 +1,23 @@
 import { Calendar, FileText, CheckCircle, Download, Eye, AlertTriangle, Users } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import type { SubjectPerformance } from '../types';
+
+const childrenPerformance: Record<string, SubjectPerformance[]> = {
+  'Richi Hassan': [
+    { subject: 'Mathematics', score: 82, grade: 'good' },
+    { subject: 'English', score: 74, grade: 'fair' },
+    { subject: 'Science', score: 91, grade: 'good' },
+    { subject: 'History', score: 58, grade: 'weak' },
+    { subject: 'Computer Sci', score: 88, grade: 'good' },
+  ],
+  'Mark Willy': [
+    { subject: 'Mathematics', score: 65, grade: 'fair' },
+    { subject: 'English', score: 89, grade: 'good' },
+    { subject: 'Science', score: 72, grade: 'fair' },
+    { subject: 'History', score: 44, grade: 'weak' },
+    { subject: 'Computer Sci', score: 78, grade: 'fair' },
+  ],
+};
 
 export function ParentsView() {
   return (
@@ -79,6 +98,67 @@ export function ParentsView() {
              <EventItem date="22" month="Apr" title="Earth Day Plantation" time="7:00 AM – 9:00 PM • School Garden" theme="orange-dark" badge="37 days" />
            </div>
         </div>
+      </div>
+
+      {/* Learning Insights - Subject Performance */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {Object.entries(childrenPerformance).map(([childName, subjects]) => (
+          <div key={childName} className="bg-white border border-s200 rounded-2xl p-6 shadow-sm">
+            <div className="mb-4">
+              <h3 className="font-serif text-lg font-bold text-s800 tracking-tight">{childName}</h3>
+              <p className="text-xs text-s500 mt-1">Subject Performance • Current Term</p>
+            </div>
+            <ResponsiveContainer width="100%" height={subjects.length * 40 + 20}>
+              <BarChart
+                data={subjects}
+                layout="vertical"
+                barSize={12}
+                margin={{ top: 0, right: 30, left: 10, bottom: 0 }}
+              >
+                <XAxis
+                  type="number"
+                  domain={[0, 100]}
+                  tick={{ fontSize: 9, fill: '#94a3b8', fontFamily: 'DM Mono, monospace' }}
+                  tickLine={false}
+                  axisLine={false}
+                  unit="%"
+                />
+                <YAxis
+                  type="category"
+                  dataKey="subject"
+                  tick={{ fontSize: 11, fill: '#334155', fontWeight: 600 }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={100}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: '#fff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 10,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                  }}
+                  formatter={(value: number) => [`${value}%`, 'Score']}
+                />
+                <Bar dataKey="score" radius={[0, 6, 6, 0]}>
+                  {subjects.map((s, i) => (
+                    <Cell
+                      key={i}
+                      fill={s.grade === 'good' ? '#22c55e' : s.grade === 'fair' ? '#f59e0b' : '#ef4444'}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="flex gap-4 mt-3 text-[10px] font-mono text-s500">
+              <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500" />Good (80%+)</span>
+              <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-amber-500" />Fair (60-79%)</span>
+              <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500" />Weak (&lt;60%)</span>
+            </div>
+          </div>
+        ))}
       </div>
 
     </div>

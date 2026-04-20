@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { HashRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { 
   UserCheck, BookOpen, Clock, 
   Settings, Bell, Search, Menu, PenTool,
-  LayoutDashboard, School
+  LayoutDashboard, School, Users, GraduationCap, BarChart3
 } from 'lucide-react';
 
 import { DashboardView } from './views/DashboardView';
@@ -15,9 +15,67 @@ import { CoursesView } from './views/CoursesView';
 import { NotificationsView } from './views/NotificationsView';
 import { SettingsView } from './views/SettingsView';
 import { LoginView } from './views/LoginView';
+import { AuthContext } from './context/AuthContext';
+import type { UserRole, AuthUser } from './types';
 
-function PageLayout({ children, onLogout }: { children: React.ReactNode, onLogout: () => void }) {
+// ── Role-based navigation config ──
+interface NavItem {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+  badge?: string;
+  activeBadge?: boolean;
+}
+
+function getNavItems(role: UserRole): NavItem[] {
+  const common: NavItem[] = [
+    { to: '/notifications', icon: <Bell size={16}/>, label: 'Alerts', badge: '5' },
+    { to: '/settings', icon: <Settings size={16}/>, label: 'Settings' },
+  ];
+
+  switch (role) {
+    case 'admin':
+      return [
+        { to: '/', icon: <LayoutDashboard size={16}/>, label: 'Dashboard' },
+        { to: '/parents', icon: <UserCheck size={16}/>, label: 'Parents' },
+        { to: '/teachers', icon: <BookOpen size={16}/>, label: 'Teachers' },
+        { to: '/timetable', icon: <Clock size={16}/>, label: 'Timetable' },
+        { to: '/courses', icon: <BookOpen size={16}/>, label: 'Courses' },
+        ...common,
+        { to: '/analytics', icon: <PenTool size={16}/>, label: 'Pen Analytics', badge: 'NEW', activeBadge: true },
+      ];
+    case 'teacher':
+      return [
+        { to: '/', icon: <LayoutDashboard size={16}/>, label: 'My Classes' },
+        { to: '/students', icon: <Users size={16}/>, label: 'Students' },
+        { to: '/timetable', icon: <Clock size={16}/>, label: 'Timetable' },
+        ...common,
+        { to: '/analytics', icon: <BarChart3 size={16}/>, label: 'Pen Analytics', badge: 'NEW', activeBadge: true },
+      ];
+    case 'parent':
+      return [
+        { to: '/', icon: <GraduationCap size={16}/>, label: 'My Children' },
+        { to: '/analytics', icon: <PenTool size={16}/>, label: 'Pen Analytics' },
+        ...common,
+      ];
+  }
+}
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  admin: 'Super Admin',
+  teacher: 'Teacher',
+  parent: 'Parent',
+};
+
+const ROLE_INITIALS: Record<UserRole, string> = {
+  admin: 'SA',
+  teacher: 'TC',
+  parent: 'PA',
+};
+
+function PageLayout({ children, onLogout, role }: { children: React.ReactNode, onLogout: () => void, role: UserRole }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const navItems = getNavItems(role);
 
   return (
     <div className="flex h-screen overflow-hidden bg-white md:p-6 lg:p-8">
@@ -45,15 +103,13 @@ function PageLayout({ children, onLogout }: { children: React.ReactNode, onLogou
           </div>
           
           <nav className="flex-1 p-3 flex flex-col gap-1 overflow-y-auto">
-            <SidebarLink to="/" icon={<LayoutDashboard size={16}/>} label="Dashboard" />
-            <SidebarLink to="/parents" icon={<UserCheck size={16}/>} label="Parents" />
-            <SidebarLink to="/teachers" icon={<BookOpen size={16}/>} label="Teachers" />
-            <SidebarLink to="/timetable" icon={<Clock size={16}/>} label="Timetable" />
-            <SidebarLink to="/courses" icon={<BookOpen size={16}/>} label="Courses" />
-            <SidebarLink to="/notifications" icon={<Bell size={16}/>} label="Alerts" badge="5" />
-            <SidebarLink to="/settings" icon={<Settings size={16}/>} label="Settings" />
-            <div className="h-px bg-white/10 my-2 mx-2" />
-            <SidebarLink to="/analytics" icon={<PenTool size={16}/>} label="Pen Analytics" badge="NEW" activeBadge />
+            {navItems.map((item, i) => (
+              <React.Fragment key={item.to + item.label}>
+                {/* Divider before Pen Analytics */}
+                {item.label === 'Pen Analytics' && <div className="h-px bg-white/10 my-2 mx-2" />}
+                <SidebarLink {...item} />
+              </React.Fragment>
+            ))}
           </nav>
 
           <div 
@@ -61,9 +117,9 @@ function PageLayout({ children, onLogout }: { children: React.ReactNode, onLogou
             onClick={onLogout}
             title="Click to Logout"
           >
-            <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-[11px] font-bold shrink-0 shadow-lg shadow-accent/20">SA</div>
+            <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-[11px] font-bold shrink-0 shadow-lg shadow-accent/20">{ROLE_INITIALS[role]}</div>
             <div>
-              <div className="text-xs font-semibold text-s100">Super Admin</div>
+              <div className="text-xs font-semibold text-s100">{ROLE_LABELS[role]}</div>
               <div className="text-[10px] text-s500 uppercase tracking-widest font-mono">Sign Out</div>
             </div>
           </div>
@@ -94,7 +150,7 @@ function PageLayout({ children, onLogout }: { children: React.ReactNode, onLogou
   );
 }
 
-function SidebarLink({ to, icon, label, badge, activeBadge }: any) {
+function SidebarLink({ to, icon, label, badge, activeBadge }: NavItem) {
   return (
     <NavLink 
       to={to}
@@ -116,54 +172,115 @@ function SidebarLink({ to, icon, label, badge, activeBadge }: any) {
   );
 }
 
+// ── Role-based route configs ──
+function AdminRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<DashboardView />} />
+      <Route path="/parents" element={<ParentsView />} />
+      <Route path="/teachers" element={<TeachersView />} />
+      <Route path="/timetable" element={<TimetableView />} />
+      <Route path="/courses" element={<CoursesView />} />
+      <Route path="/notifications" element={<NotificationsView />} />
+      <Route path="/settings" element={<SettingsView />} />
+      <Route path="/analytics" element={<AnalyticsView />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+function TeacherRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<TeachersView />} />
+      <Route path="/students" element={<TeachersView />} />
+      <Route path="/timetable" element={<TimetableView />} />
+      <Route path="/notifications" element={<NotificationsView />} />
+      <Route path="/settings" element={<SettingsView />} />
+      <Route path="/analytics" element={<AnalyticsView />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+function ParentRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<ParentsView />} />
+      <Route path="/analytics" element={<ParentsView />} />
+      <Route path="/notifications" element={<NotificationsView />} />
+      <Route path="/settings" element={<SettingsView />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+function RoleRoutes({ role }: { role: UserRole }) {
+  switch (role) {
+    case 'admin': return <AdminRoutes />;
+    case 'teacher': return <TeacherRoutes />;
+    case 'parent': return <ParentRoutes />;
+  }
+}
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [role, setRole] = useState<UserRole>('admin');
 
   useEffect(() => {
     const auth = localStorage.getItem('notivo_auth');
+    const savedRole = localStorage.getItem('notivo_role') as UserRole | null;
     setIsAuthenticated(auth === 'true');
+    if (savedRole) setRole(savedRole);
   }, []);
+
+  const handleLogin = (loginRole: UserRole) => {
+    localStorage.setItem('notivo_auth', 'true');
+    localStorage.setItem('notivo_role', loginRole);
+    setRole(loginRole);
+    setIsAuthenticated(true);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('notivo_auth');
+    localStorage.removeItem('notivo_role');
     setIsAuthenticated(false);
   };
 
-  if (isAuthenticated === null) return null; // Wait for hydration
+  const authValue = useMemo(() => ({
+    user: isAuthenticated ? { name: ROLE_LABELS[role], role } as AuthUser : null,
+    role,
+    login: handleLogin,
+    logout: handleLogout,
+  }), [isAuthenticated, role]);
+
+  if (isAuthenticated === null) return null;
 
   return (
-    <HashRouter>
-      <Routes>
-        <Route 
-          path="/login" 
-          element={
-            isAuthenticated ? <Navigate to="/" replace /> : <LoginView onLogin={() => setIsAuthenticated(true)} />
-          } 
-        />
-        
-        <Route 
-          path="/*" 
-          element={
-            isAuthenticated ? (
-              <PageLayout onLogout={handleLogout}>
-                <Routes>
-                  <Route path="/" element={<DashboardView />} />
-                  <Route path="/parents" element={<ParentsView />} />
-                  <Route path="/teachers" element={<TeachersView />} />
-                  <Route path="/timetable" element={<TimetableView />} />
-                  <Route path="/courses" element={<CoursesView />} />
-                  <Route path="/notifications" element={<NotificationsView />} />
-                  <Route path="/settings" element={<SettingsView />} />
-                  <Route path="/analytics" element={<AnalyticsView />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </PageLayout>
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          } 
-        />
-      </Routes>
-    </HashRouter>
+    <AuthContext.Provider value={authValue}>
+      <HashRouter>
+        <Routes>
+          <Route 
+            path="/login" 
+            element={
+              isAuthenticated ? <Navigate to="/" replace /> : <LoginView onLogin={() => handleLogin('admin')} />
+            } 
+          />
+          
+          <Route 
+            path="/*" 
+            element={
+              isAuthenticated ? (
+                <PageLayout onLogout={handleLogout} role={role}>
+                  <RoleRoutes role={role} />
+                </PageLayout>
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            } 
+          />
+        </Routes>
+      </HashRouter>
+    </AuthContext.Provider>
   );
 }

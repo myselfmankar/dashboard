@@ -11,8 +11,8 @@ export function KpiItem({ title, value, trend, icon, mtc, isDown }: any) {
     purple: "bg-purple-50 border-purple-200 text-purple-600",
   };
   return (
-    <div className="bg-white rounded-xl p-4 border border-s200 hover:shadow-lg transition-all group cursor-pointer">
-      <div className={`w-10 h-10 rounded-xl mb-4 flex items-center justify-center ${themes[mtc] || themes.blue}`}>
+    <div className="glass-card p-4 hover:shadow-xl transition-all group cursor-pointer">
+      <div className={`w-10 h-10 rounded-2xl mb-4 flex items-center justify-center ${themes[mtc] || themes.blue}`}>
         {React.cloneElement(icon, { size: 20 })}
       </div>
       <div className="text-2xl font-headline tracking-tighter text-s900">{value}</div>

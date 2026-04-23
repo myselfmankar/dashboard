@@ -69,7 +69,7 @@ export function ParentsView() {
         </div>
 
         {/* Notice Board (right side) */}
-        <div className="bg-white border border-s200 rounded-2xl p-5">
+        <div className="glass-card p-5">
            <h3 className="font-serif text-lg font-bold text-s800 tracking-tight mb-4 border-l-4 border-accent pl-3">School Events</h3>
            <div className="flex flex-col gap-3 max-h-[500px] overflow-y-auto pr-2">
              <EventItem date="20" month="Mar" title="Parent-Teacher Meeting" time="9:00 AM – 1:00 PM • School Hall" theme="orange" badge="Today+4" />
@@ -87,7 +87,7 @@ export function ParentsView() {
 
 function ChildCard({ title, name, gender, roll, addmId, addmDate, cls, section, bg, iconColor }: any) {
   return (
-    <div className="bg-white border border-s200 rounded-2xl p-6 shadow-sm relative overflow-hidden">
+    <div className="glass-card p-6 relative overflow-hidden">
       <div className="absolute top-0 left-0 w-1.5 h-full bg-accent" />
       <div className="flex justify-between items-center mb-6 pl-2">
          <h3 className="font-headline text-lg text-s900 tracking-wide uppercase">{title}</h3>

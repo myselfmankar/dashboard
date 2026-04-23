@@ -1,28 +1,33 @@
+import { useEffect, useState } from 'react';
 import { Layers, Users, TrendingUp, Plus, BookOpen } from 'lucide-react';
 import { KpiItem } from '../components/KpiItem';
+import { api } from '../api';
+import type { Teacher } from '../types';
+
+const COLOR_CYCLE = ['blue', 'purple', 'green', 'orange', 'cyan', 'pink'];
 
 export function CoursesView() {
-  const kpis = {
-    activeCourses: 24,
-    enrollments: "1,240",
-    avgCompletion: "87%"
-  };
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
 
-  const courses = [
-    { title: 'Advanced Mathematics', code: 'MAT-301', instructor: 'Leon Carter', enrollments: 120, progress: 85, color: 'blue' },
-    { title: 'Introduction to Physics', code: 'PHY-101', instructor: 'Amara Singh', enrollments: 85, progress: 60, color: 'purple' },
-    { title: 'Organic Chemistry', code: 'CHE-202', instructor: 'Priya Mehta', enrollments: 65, progress: 92, color: 'green' },
-    { title: 'World History', code: 'HIS-105', instructor: 'John Doe', enrollments: 140, progress: 45, color: 'orange' },
-    { title: 'Computer Science 101', code: 'CS-101', instructor: 'Ivan Torres', enrollments: 200, progress: 30, color: 'cyan' },
-    { title: 'English Literature', code: 'ENG-201', instructor: 'James Okafor', enrollments: 90, progress: 78, color: 'pink' },
-  ];
+  useEffect(() => {
+    api.getTeachers().then(setTeachers).catch(console.error);
+  }, []);
+
+  const courses = teachers.map((t, i) => ({
+    title: t.sub || 'Class',
+    code: t.cls,
+    instructor: t.name,
+    enrollments: 0,   // no enrollment count in current schema
+    progress: 0,
+    color: COLOR_CYCLE[i % COLOR_CYCLE.length],
+  }));
 
   return (
     <div className="flex flex-col gap-6 animate-in slide-in-from-bottom-4 duration-500 pb-10">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-xl font-normal text-s900 tracking-widest font-headline uppercase">Courses</h1>
-          <p className="text-[11px] text-s400 mt-1 font-mono uppercase tracking-widest">24 active courses this semester</p>
+          <p className="text-[11px] text-s400 mt-1 font-mono uppercase tracking-widest">{teachers.length} active classes this semester</p>
         </div>
         <button className="flex items-center gap-2 bg-s900 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-black transition-colors shadow-sm">
           <Plus size={16} /> New Course
@@ -30,16 +35,20 @@ export function CoursesView() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <KpiItem title="Active Courses" mtc="blue" value={kpis.activeCourses} trend="+4 this term" icon={<Layers/>} />
-        <KpiItem title="Enrollments" mtc="green" value={kpis.enrollments} trend="+18%" icon={<Users/>} />
-        <KpiItem title="Avg Completion" mtc="purple" value={kpis.avgCompletion} trend="Above target" icon={<TrendingUp/>} />
+        <KpiItem title="Active Courses" mtc="blue" value={teachers.length} trend="This term" icon={<Layers/>} />
+        <KpiItem title="Enrollments" mtc="green" value="N/A" trend="No schema yet" icon={<Users/>} />
+        <KpiItem title="Avg Completion" mtc="purple" value="N/A" trend="No schema yet" icon={<TrendingUp/>} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {courses.map((c, i) => (
-          <CourseCard key={i} {...c} />
-        ))}
-      </div>
+      {courses.length === 0 ? (
+        <div className="text-center py-16 text-s400 font-mono text-sm">Loading courses…</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {courses.map((c, i) => (
+            <CourseCard key={i} {...c} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

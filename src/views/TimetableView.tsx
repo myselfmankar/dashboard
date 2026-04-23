@@ -1,9 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { api } from '../api';
+import type { Teacher } from '../types';
 
 export function TimetableView() {
   const [grade, setGrade] = useState('Grade 10-A');
-  
-  // Dummy data for timetable
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+
+  useEffect(() => {
+    api.getTeachers().then(setTeachers).catch(console.error);
+  }, []);
+
+  // Periods are structural (no timetable collection in Firestore yet)
   const periods = [
     { period: '1', start: '08:00 AM', end: '08:45 AM', duration: '45 mins' },
     { period: '2', start: '08:45 AM', end: '09:30 AM', duration: '45 mins' },
@@ -15,13 +22,12 @@ export function TimetableView() {
     { period: '6', start: '12:45 PM', end: '01:30 PM', duration: '45 mins' },
   ];
 
-  const assignments = [
-    { subject: 'Mathematics', teacher: 'Leon Carter', periods: 6 },
-    { subject: 'Physics', teacher: 'Amara Singh', periods: 5 },
-    { subject: 'Chemistry', teacher: 'Priya Mehta', periods: 4 },
-    { subject: 'English', teacher: 'James Okafor', periods: 5 },
-    { subject: 'Computer Sci', teacher: 'Ivan Torres', periods: 3 },
-  ];
+  // Build assignments from real teacher data; periods count is placeholder
+  const assignments = teachers.map((t) => ({
+    subject: t.sub || t.cls,
+    teacher: t.name,
+    periods: 5,
+  }));
 
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
   const gridPeriods = [1, 2, 'Break', 3, 4, 'Lunch', 5, 6];

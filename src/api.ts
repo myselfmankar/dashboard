@@ -23,12 +23,25 @@ import {
 } from 'firebase/firestore';
 import { firestore } from './firebase';
 import { cache, TTL } from './lib/cache';
-import localDbRaw from '../db.json';
 
-// Typed fallback: treat db.json's shape as matching the happy-path return types.
-// TS infers generics from the first `return` so we cast fallbacks to `never`
-// to let the success branch drive inference.
-const localDb = localDbRaw as unknown as Record<string, never>;
+// ── Fallback defaults (used when Firestore is unreachable) ────────────────────
+// These are zero/empty values — views gracefully show empty states.
+const FALLBACK = {
+  kpis: {
+    totalStudents: 0,
+    totalStudentsChange: '',
+    totalTeachers: 0,
+    totalTeachersChange: '',
+    penSessionsToday: 0,
+    penSessionsLive: 0,
+    studentsAtRisk: 0,
+  },
+  alerts:              [] as never[],
+  demographics:        [] as never[],
+  teachers:            [] as never[],
+  students:            [] as never[],
+  weakConceptAnalytics: [] as never[],
+};
 
 // ── Runtime config (set at login from the signed-in user's Firestore doc) ──────
 let _instituteId = 'inst_001'; // fallback until App.tsx calls setApiConfig
@@ -203,8 +216,8 @@ export const api = {
           studentsAtRisk: atRiskStudents.size,
         };
       } catch (err) {
-        console.error('getKpis failed, falling back to local db.json', err);
-        return localDb.kpis;
+        console.error('getKpis failed, using empty fallback', err);
+        return FALLBACK.kpis;
       }
     }),
 
@@ -230,8 +243,8 @@ export const api = {
           severity: 'critical' as const,
         }));
       } catch (err) {
-        console.error('getAlerts failed, falling back to local db.json', err);
-        return localDb.alerts;
+        console.error('getAlerts failed, using empty fallback', err);
+        return FALLBACK.alerts;
       }
     }),
 
@@ -248,7 +261,7 @@ export const api = {
         const total = classes.reduce((n, c) => n + (c.studentIds?.length ?? 0), 0);
         return [{ label: 'Students', value: total }];
       } catch {
-        return localDb.demographics;
+        return FALLBACK.demographics;
       }
     }),
 
@@ -279,8 +292,8 @@ export const api = {
           };
         });
       } catch (err) {
-        console.error('getTeachers failed, falling back to local db.json', err);
-        return localDb.teachers;
+        console.error('getTeachers failed, using empty fallback', err);
+        return FALLBACK.teachers;
       }
     }),
 
@@ -307,8 +320,8 @@ export const api = {
           }),
         );
       } catch (err) {
-        console.error('getStudents failed, falling back to local db.json', err);
-        return localDb.students;
+        console.error('getStudents failed, using empty fallback', err);
+        return FALLBACK.students;
       }
     }),
 
@@ -410,8 +423,8 @@ export const api = {
           .sort((a, b) => a.score - b.score)
           .slice(0, 12);
       } catch (err) {
-        console.error('getWeakConcepts failed, falling back to local db.json', err);
-        return localDb.weakConceptAnalytics;
+        console.error('getWeakConcepts failed, using empty fallback', err);
+        return FALLBACK.weakConceptAnalytics;
       }
     }),
 };

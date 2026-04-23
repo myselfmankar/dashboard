@@ -3,10 +3,11 @@ import { api } from '../api';
 import { Users, BookOpen, PenTool, AlertCircle } from 'lucide-react';
 import { KpiItem } from '../components/KpiItem';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import type { DashboardData, AttendanceDay, Demographics } from '../types';
+import type { DashboardData, AttendanceDay, Demographics, Teacher } from '../types';
 
 export function DashboardView() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
 
   const attendanceData: AttendanceDay[] = [
     { day: 'Mon', present: 345, absent: 55 },
@@ -18,19 +19,15 @@ export function DashboardView() {
   ];
 
   useEffect(() => {
-    Promise.all([api.getKpis(), api.getAlerts(), api.getDemographics()])
-      .then(([kpis, alerts, demographics]) => setData({ kpis, alerts, demographics }))
+    Promise.all([api.getKpis(), api.getAlerts(), api.getDemographics(), api.getTeachers()])
+      .then(([kpis, alerts, demographics, teacherList]) => {
+        setData({ kpis, alerts, demographics });
+        setTeachers(teacherList);
+      })
       .catch(console.error);
   }, []);
 
   if (!data) return <div className="p-8 text-s400 font-mono text-sm">Synchronizing Notivo Cloud...</div>;
-
-  const topTeachers = [
-    { name: 'Emilia Clarke', subject: 'English', cls: '10-A', status: 'Online' },
-    { name: 'Dr. John Doe', subject: 'Physics', cls: '12-C', status: 'In Class' },
-    { name: 'Sarah Parker', subject: 'Biology', cls: '9-B', status: 'Reviewing' },
-    { name: 'Leon Carter', subject: 'Math', cls: '10-C', status: 'In Class' },
-  ];
 
   return (
     <div className="flex flex-col gap-6 animate-in slide-in-from-bottom-4 duration-500 pb-10">
@@ -115,13 +112,15 @@ export function DashboardView() {
                 </tr>
               </thead>
               <tbody>
-                {topTeachers.map((t, i) => (
+                {teachers.length === 0 ? (
+                  <tr><td colSpan={4} className="py-4 text-center text-xs text-s400 font-mono">Loading faculty…</td></tr>
+                ) : teachers.map((t, i) => (
                   <tr key={i} className="bg-s50 rounded-xl hover:bg-s100 transition-colors">
                     <td className="py-2.5 px-3 rounded-l-xl font-bold text-s800">{t.name}</td>
-                    <td className="py-2.5 px-3">{t.subject}</td>
+                    <td className="py-2.5 px-3">{t.sub}</td>
                     <td className="py-2.5 px-3 font-mono text-xs">{t.cls}</td>
                     <td className="py-2.5 px-3 rounded-r-xl text-right">
-                      <span className={`text-[10px] px-2 py-1 flex items-center justify-end font-bold rounded uppercase tracking-widest ${t.status === 'Online' ? 'text-green-600' : t.status === 'In Class' ? 'text-blue-600' : 'text-orange-600'}`}>
+                      <span className="text-[10px] px-2 py-1 flex items-center justify-end font-bold rounded uppercase tracking-widest text-green-600">
                         {t.status}
                       </span>
                     </td>
@@ -188,27 +187,21 @@ export function DashboardView() {
             <span className="animate-pulse bg-accent text-white text-[9px] font-mono tracking-widest font-bold px-2.5 py-1 rounded-full">LIVE</span>
           </div>
           <div className="flex flex-col gap-3">
-             <div className="flex items-start gap-2 p-2.5 bg-red-50 border border-red-200 rounded-xl shadow-[0_2px_10px_-4px_rgba(239,68,68,0.2)]">
-                <div className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 mt-1" />
+            {data.alerts.length === 0 ? (
+              <div className="text-xs text-s400 font-mono text-center py-4">No alerts at this time</div>
+            ) : data.alerts.slice(0, 3).map((a, i) => (
+              <div key={a.id} className={`flex items-start gap-2 p-2.5 rounded-xl shadow-[0_2px_10px_-4px_rgba(239,68,68,0.2)] ${
+                i === 0 ? 'bg-red-50 border border-red-200' : 'bg-amber-50 border border-amber-200'
+              }`}>
+                <div className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1 ${i === 0 ? 'bg-red-500' : 'bg-amber-500'}`} />
                 <div>
-                   <div className="text-[11px] font-bold text-s900 leading-snug"><span className="text-red-700">Tanya M.</span> — 9m 40s hesitation. Writing speed &darr; 88%.</div>
-                   <div className="text-[9px] font-mono text-s500 mt-1 uppercase tracking-widest">Grade 10-A • Mathematics • 2 min ago</div>
+                  <div className="text-[11px] font-bold text-s900 leading-snug">
+                    <span className={i === 0 ? 'text-red-700' : 'text-amber-700'}>{a.studentName}</span> — {a.issue}
+                  </div>
+                  <div className="text-[9px] font-mono text-s500 mt-1 uppercase tracking-widest">{a.context}</div>
                 </div>
-             </div>
-             <div className="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-xl shadow-[0_2px_10px_-4px_rgba(245,158,11,0.2)]">
-                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 mt-1" />
-                <div>
-                   <div className="text-[11px] font-bold text-s900 leading-snug"><span className="text-amber-700">Rahul V.</span> — Attempted Q4 three times, crossed out each time.</div>
-                   <div className="text-[9px] font-mono text-s500 mt-1 uppercase tracking-widest">Grade 10-A • Mathematics • 8 min ago</div>
-                </div>
-             </div>
-             <div className="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-xl shadow-[0_2px_10px_-4px_rgba(245,158,11,0.2)]">
-                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 mt-1" />
-                <div>
-                   <div className="text-[11px] font-bold text-s900 leading-snug"><span className="text-amber-700">Vivaan T.</span> — Full writing stop for 2:55 on integration problem.</div>
-                   <div className="text-[9px] font-mono text-s500 mt-1 uppercase tracking-widest">Grade 10-A • Mathematics • 11 min ago</div>
-                </div>
-             </div>
+              </div>
+            ))}
           </div>
         </div>
 

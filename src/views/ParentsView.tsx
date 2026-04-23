@@ -140,7 +140,7 @@ export function ParentsView() {
                     fontWeight: 600,
                     boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                   }}
-                  formatter={(value: number) => [`${value}%`, 'Score']}
+                  formatter={(value) => [`${value}%`, 'Score']}
                 />
                 <Bar dataKey="score" radius={[0, 6, 6, 0]}>
                   {subjects.map((s, i) => (

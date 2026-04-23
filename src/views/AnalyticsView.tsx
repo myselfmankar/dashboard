@@ -5,56 +5,32 @@ import { KpiItem } from '../components/KpiItem';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import type { WeakConcept, HeatmapStudent } from '../types';
 
-const hmStudents = [
-  {name:"Aarav S.",risk:0,score:91},
-  {name:"Priya M.",risk:0,score:88},
-  {name:"Riya K.",risk:1,score:82},
-  {name:"Aryan P.",risk:1,score:80},
-  {name:"Sneha D.",risk:1,score:79},
-  {name:"Kabir L.",risk:1,score:77},
-  {name:"Ananya R.",risk:2,score:71},
-  {name:"Vivaan T.",risk:2,score:68},
-  {name:"Ishaan G.",risk:2,score:65},
-  {name:"Meera J.",risk:2,score:63},
-  {name:"Rahul V.",risk:3,score:55},
-  {name:"Pooja B.",risk:3,score:52},
-  {name:"Dev S.",risk:3,score:50},
-  {name:"Nisha P.",risk:4,score:42},
-  {name:"Rohan A.",risk:4,score:38},
-  {name:"Tanya M.",risk:5,score:29},
-  {name:"Kiran R.",risk:0,score:86},
-  {name:"Sana Q.",risk:1,score:78},
-  {name:"Aditya N.",risk:2,score:66},
-  {name:"Diya C.",risk:0,score:93},
-  {name:"Farhan I.",risk:3,score:53},
-  {name:"Lavanya T.",risk:1,score:81},
-  {name:"Mihir J.",risk:2,score:70},
-  {name:"Natasha K.",risk:0,score:90},
-  {name:"Om P.",risk:4,score:40},
-  {name:"Preethi S.",risk:1,score:83},
-  {name:"Rajat M.",risk:2,score:64},
-  {name:"Shruti A.",risk:0,score:87},
-  {name:"Tejas R.",risk:3,score:51},
-  {name:"Usha N.",risk:1,score:76},
-  {name:"Zara K.",risk:5,score:31},
-  {name:"Veer S.",risk:2,score:67},
-];
+
 
 export function AnalyticsView() {
   const [concepts, setConcepts] = useState<WeakConcept[]>([]);
+  const [students, setStudents] = useState<HeatmapStudent[]>([]);
+  const [teachersPerf, setTeachersPerf] = useState<{name:string;issues:number;total:number;avgScore:number}[]>([]);
 
-  const allStudents: HeatmapStudent[] = [...hmStudents, ...hmStudents.slice(0, 8)] as HeatmapStudent[];
+  const allStudents: HeatmapStudent[] = students;
 
   useEffect(() => {
-    api.getWeakConcepts().then(setConcepts).catch(console.error);
+    Promise.all([
+      api.getWeakConcepts(),
+      api.getStudentsWithRisk(),
+      api.getTeachers(),
+    ]).then(([c, studs, tList]) => {
+      setConcepts(c);
+      setStudents(studs);
+      const avgScore = studs.length > 0 ? Math.round(studs.reduce((a, s) => a + s.score, 0) / studs.length) : 0;
+      setTeachersPerf(tList.map((t) => ({
+        name: t.name,
+        issues: studs.filter((s) => s.risk >= 3).length,
+        total: studs.length,
+        avgScore,
+      })));
+    }).catch(console.error);
   }, []);
-
-  const teachersPerf = [
-    { name: 'Dr. Amara Singh', issues: 12, total: 35, avgScore: 68 },
-    { name: 'Mr. Leon Carter', issues: 8, total: 32, avgScore: 74 },
-    { name: 'Ms. Priya Mehta', issues: 5, total: 30, avgScore: 79 },
-    { name: 'Mr. James Okafor', issues: 3, total: 28, avgScore: 82 },
-  ];
 
   return (
     <div className="flex flex-col gap-6 animate-in slide-in-from-right-4 duration-500 pb-10">
@@ -168,7 +144,7 @@ export function AnalyticsView() {
                        fontWeight: 600,
                        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                      }}
-                     formatter={(value: number) => [`${value}%`, 'Error Rate']}
+                     formatter={(value) => [`${value}%`, 'Error Rate']}
                    />
                    <Bar dataKey="score" radius={[0, 4, 4, 0]}>
                      {concepts.slice(0, 4).map((_: WeakConcept, i: number) => (

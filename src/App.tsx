@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { HashRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { 
   UserCheck, BookOpen, Clock, 
   Settings, Bell, Search, Menu, PenTool,
@@ -16,6 +18,9 @@ import { NotificationsView } from './views/NotificationsView';
 import { SettingsView } from './views/SettingsView';
 import { LoginView } from './views/LoginView';
 import { AuthContext } from './context/AuthContext';
+import { firebaseAuth } from './firebase';
+import { firestore } from './firebase';
+import { setApiConfig } from './api';
 import type { UserRole, AuthUser } from './types';
 
 // ── Role-based navigation config ──
@@ -103,7 +108,7 @@ function PageLayout({ children, onLogout, role }: { children: React.ReactNode, o
           </div>
           
           <nav className="flex-1 p-3 flex flex-col gap-1 overflow-y-auto">
-            {navItems.map((item, i) => (
+            {navItems.map((item) => (
               <React.Fragment key={item.to + item.label}>
                 {/* Divider before Pen Analytics */}
                 {item.label === 'Pen Analytics' && <div className="h-px bg-white/10 my-2 mx-2" />}
@@ -225,34 +230,73 @@ function RoleRoutes({ role }: { role: UserRole }) {
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [role, setRole] = useState<UserRole>('admin');
+  const [role, setRole] = useState<UserRole>('teacher');
+  const [user, setUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
-    const auth = localStorage.getItem('notivo_auth');
-    const savedRole = localStorage.getItem('notivo_role') as UserRole | null;
-    setIsAuthenticated(auth === 'true');
-    if (savedRole) setRole(savedRole);
+    const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
+      if (!firebaseUser) {
+        setUser(null);
+        setRole('teacher');
+        setIsAuthenticated(false);
+        return;
+      }
+
+      // Resolve role from Firestore users/{uid} doc. Default to 'teacher' if missing.
+      let resolvedRole: UserRole = 'teacher';
+      let resolvedName = firebaseUser.displayName || firebaseUser.email || '';
+      try {
+        const snap = await getDoc(doc(firestore, 'users', firebaseUser.uid));
+        if (snap.exists()) {
+          const data = snap.data() as { role?: UserRole; fullName?: string; displayName?: string; name?: string; email?: string; instituteId?: string };
+          const firestoreRole = data.role;
+          if (firestoreRole === 'admin' || firestoreRole === 'teacher' || firestoreRole === 'parent') {
+            resolvedRole = firestoreRole;
+          } else {
+            // Temporary path: no role field yet — check VITE_ADMIN_EMAILS env var.
+            const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS ?? '')
+              .split(',')
+              .map((e: string) => e.trim().toLowerCase())
+              .filter(Boolean);
+            const userEmail = (data.email || firebaseUser.email || '').toLowerCase();
+            if (userEmail && adminEmails.includes(userEmail)) {
+              resolvedRole = 'admin';
+            }
+          }
+          // Set institute scope for all API calls
+          if (data.instituteId) setApiConfig({ instituteId: data.instituteId });
+          // Resolve display name: fullName > displayName > name
+          resolvedName = data.fullName || data.displayName || data.name || resolvedName;
+        }
+      } catch (err) {
+        console.warn('Failed to load user role from Firestore, defaulting to teacher.', err);
+      }
+
+      setRole(resolvedRole);
+      setUser({
+        name: resolvedName || ROLE_LABELS[resolvedRole],
+        role: resolvedRole,
+      });
+      setIsAuthenticated(true);
+    });
+
+    return unsubscribe;
   }, []);
 
-  const handleLogin = (loginRole: UserRole) => {
-    localStorage.setItem('notivo_auth', 'true');
-    localStorage.setItem('notivo_role', loginRole);
-    setRole(loginRole);
-    setIsAuthenticated(true);
+  const handleLogin = (_loginRole: UserRole) => {
+    // Role is now authoritative from Firestore; no-op kept for AuthContext compatibility.
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('notivo_auth');
-    localStorage.removeItem('notivo_role');
-    setIsAuthenticated(false);
+  const handleLogout = async () => {
+    await signOut(firebaseAuth);
   };
 
   const authValue = useMemo(() => ({
-    user: isAuthenticated ? { name: ROLE_LABELS[role], role } as AuthUser : null,
+    user,
     role,
     login: handleLogin,
     logout: handleLogout,
-  }), [isAuthenticated, role]);
+  }), [user, role]);
 
   if (isAuthenticated === null) return null;
 
@@ -263,7 +307,7 @@ export default function App() {
           <Route 
             path="/login" 
             element={
-              isAuthenticated ? <Navigate to="/" replace /> : <LoginView onLogin={() => handleLogin('admin')} />
+              isAuthenticated ? <Navigate to="/" replace /> : <LoginView />
             } 
           />
           

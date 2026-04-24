@@ -1,51 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BookOpen, Users, TrendingUp, ClipboardList } from 'lucide-react';
 import { KpiItem } from '../components/KpiItem';
-
-const hmStudents = [
-  {name:"Aarav S.",risk:0,score:91},
-  {name:"Priya M.",risk:0,score:88},
-  {name:"Riya K.",risk:1,score:82},
-  {name:"Aryan P.",risk:1,score:80},
-  {name:"Sneha D.",risk:1,score:79},
-  {name:"Kabir L.",risk:1,score:77},
-  {name:"Ananya R.",risk:2,score:71},
-  {name:"Vivaan T.",risk:2,score:68},
-  {name:"Ishaan G.",risk:2,score:65},
-  {name:"Meera J.",risk:2,score:63},
-  {name:"Rahul V.",risk:3,score:55},
-  {name:"Pooja B.",risk:3,score:52},
-  {name:"Dev S.",risk:3,score:50},
-  {name:"Nisha P.",risk:4,score:42},
-  {name:"Rohan A.",risk:4,score:38},
-  {name:"Tanya M.",risk:5,score:29},
-  {name:"Kiran R.",risk:0,score:86},
-  {name:"Sana Q.",risk:1,score:78},
-  {name:"Aditya N.",risk:2,score:66},
-  {name:"Diya C.",risk:0,score:93},
-  {name:"Farhan I.",risk:3,score:53},
-  {name:"Lavanya T.",risk:1,score:81},
-  {name:"Mihir J.",risk:2,score:70},
-  {name:"Natasha K.",risk:0,score:90},
-  {name:"Om P.",risk:4,score:40},
-  {name:"Preethi S.",risk:1,score:83},
-  {name:"Rajat M.",risk:2,score:64},
-  {name:"Shruti A.",risk:0,score:87},
-  {name:"Tejas R.",risk:3,score:51},
-  {name:"Usha N.",risk:1,score:76},
-  {name:"Zara K.",risk:5,score:31},
-  {name:"Veer S.",risk:2,score:67},
-];
+import { api } from '../api';
+import { useAuth } from '../context/AuthContext';
+import type { HeatmapStudent } from '../types';
 
 export function TeachersView() {
-  const [data] = useState({
-    kpis: {
-      myClasses: 6,
-      attendanceRate: '94%',
-      avgScore: '78%',
-      pendingReviews: 3
-    }
-  });
+  const { user } = useAuth();
+  const firstName = user?.name?.split(' ')[0] ?? 'Teacher';
+  const [students, setStudents] = useState<HeatmapStudent[]>([]);
+
+  useEffect(() => {
+    api.getStudentsWithRisk().then(setStudents).catch(console.error);
+  }, []);
+
+  const avgScore = students.length > 0
+    ? `${Math.round(students.reduce((s, x) => s + x.score, 0) / students.length)}%`
+    : '--';
+  const pendingReviews = students.filter((s) => s.risk >= 3).length;
 
   return (
     <div className="flex gap-6 h-full p-4 lg:p-0">
@@ -55,7 +27,7 @@ export function TeachersView() {
         {/* Welcome Banner */}
         <div className="bg-gradient-to-br from-[#FFE8D0] to-white border border-[#FFD4A8] rounded-2xl p-6 relative overflow-hidden shadow-sm">
           <div className="relative z-10">
-            <h2 className="text-3xl font-headline tracking-tighter text-s900 mb-2">Welcome Back, <span className="text-accent italic">Tiana!</span></h2>
+            <h2 className="text-3xl font-headline tracking-wide text-s900 mb-2">Welcome Back, <span className="text-accent font-serif italic">{firstName}!</span></h2>
             <p className="text-sm font-semibold text-s600">Your students completed <strong className="text-s900">80%</strong> of the tasks.</p>
             <p className="text-sm font-semibold text-s600">Progress is <span className="text-green-600 bg-green-100 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider">very good!</span></p>
           </div>
@@ -89,10 +61,10 @@ export function TeachersView() {
 
         {/* Teacher KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiItem title="My Classes" mtc="blue" value={data.kpis.myClasses} trend="This term" icon={<BookOpen/>} />
-          <KpiItem title="Attendance Rate" mtc="green" value={data.kpis.attendanceRate} trend="Above avg" icon={<Users/>} />
-          <KpiItem title="Avg Score" mtc="purple" value={data.kpis.avgScore} trend="+3% vs last" icon={<TrendingUp/>} />
-          <KpiItem title="Pending Reviews" mtc="amber" value={data.kpis.pendingReviews} trend="Action needed" icon={<ClipboardList/>} isDown />
+          <KpiItem title="My Classes" mtc="blue" value={1} trend="This term" icon={<BookOpen/>} />
+          <KpiItem title="Attendance Rate" mtc="green" value="N/A" trend="No data yet" icon={<Users/>} />
+          <KpiItem title="Avg Score" mtc="purple" value={avgScore} trend="Current term" icon={<TrendingUp/>} />
+          <KpiItem title="Pending Reviews" mtc="amber" value={pendingReviews} trend="Action needed" icon={<ClipboardList/>} isDown />
         </div>
 
         {/* Heatmap & Alerts */}
@@ -114,7 +86,9 @@ export function TeachersView() {
 
            <div className="flex flex-col md:flex-row gap-6">
               <div className="flex-1 grid grid-cols-5 sm:grid-cols-8 gap-1">
-                 {hmStudents.map((s, i) => {
+                 {students.length === 0 ? (
+                   <div className="col-span-8 py-8 text-center text-xs text-s400 font-mono">Loading student data…</div>
+                 ) : students.map((s, i) => {
                    let baseStyles = "w-full aspect-square rounded-md border flex flex-col justify-center items-center hover:brightness-95 transition-all cursor-pointer shadow-sm relative overflow-hidden";
                    let colorStyles = "";
                    let nameColor = "";
@@ -170,12 +144,16 @@ export function TeachersView() {
                  </div>
                  <div>
                     <div className="text-[10px] font-mono text-s400 uppercase tracking-widest mb-2 border-b border-s100 pb-1">Live Alert Feed</div>
-                    <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-xs shadow-sm">
-                      <div className="font-bold text-s900 flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-red-500" /> Tanya M.
+                    {students.filter((s) => s.risk >= 4).length === 0 ? (
+                      <div className="bg-green-50 border border-green-100 rounded-lg p-3 text-xs text-green-700 font-mono">No critical alerts</div>
+                    ) : (
+                      <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-xs shadow-sm">
+                        <div className="font-bold text-s900 flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-red-500" /> {students.find((s) => s.risk >= 4)?.name}
+                        </div>
+                        <div className="text-[11px] text-s600 mt-1 leading-snug">Risk level {students.find((s) => s.risk >= 4)?.risk} • Score {students.find((s) => s.risk >= 4)?.score}%</div>
                       </div>
-                      <div className="text-[11px] text-s600 mt-1 leading-snug">9m 40s hesitation. Writing speed ↓ 88%.</div>
-                    </div>
+                    )}
                  </div>
               </div>
            </div>

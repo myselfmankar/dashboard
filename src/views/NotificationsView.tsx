@@ -1,12 +1,14 @@
+import { useEffect, useState } from 'react';
 import { Check, AlertCircle, Info, Megaphone, Calendar } from 'lucide-react';
+import { api } from '../api';
+import type { Alert } from '../types';
 
 export function NotificationsView() {
-  const recentAlerts = [
-    { type: 'warning', title: 'High Absence Rate in Grade 10-A', time: '10 mins ago', desc: 'Attendance dropped below 85% today.' },
-    { type: 'info', title: 'System Update Scheduled', time: '2 hours ago', desc: 'Platform maintenance tonight from 2 AM to 4 AM.' },
-    { type: 'success', title: 'Exam Results Published', time: '5 hours ago', desc: 'Mid-term results for Grade 9 are now live.' },
-    { type: 'warning', title: 'Fee Defaulters Alert', time: '1 day ago', desc: '14 students have pending fees past due date.' },
-  ];
+  const [recentAlerts, setRecentAlerts] = useState<Alert[]>([]);
+
+  useEffect(() => {
+    api.getAlerts().then(setRecentAlerts).catch(console.error);
+  }, []);
 
   const notices = [
     { title: 'New Transport Routes', date: 'Oct 24, 2026', author: 'Transport Dept' },
@@ -25,7 +27,7 @@ export function NotificationsView() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-xl font-normal text-s900 tracking-widest font-headline uppercase">Notifications</h1>
-          <p className="text-[11px] text-s400 mt-1 font-mono uppercase tracking-widest">5 unread alerts</p>
+          <p className="text-[11px] text-s400 mt-1 font-mono uppercase tracking-widest">{recentAlerts.length} active alerts</p>
         </div>
         <button className="flex items-center gap-2 bg-s100 text-s700 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-s200 transition-colors shadow-sm">
           <Check size={16} /> Mark All Read
@@ -35,31 +37,27 @@ export function NotificationsView() {
       <div className="bg-white border border-s200 rounded-2xl p-6 shadow-sm overflow-hidden">
          <div className="mb-6 border-b border-s100 pb-4">
            <h3 className="font-serif text-lg font-bold text-s800 tracking-tight">Recent Alerts</h3>
-           <p className="text-xs text-s500">System and activity notifications</p>
+           <p className="text-xs text-s500">Live pen-session intelligence from Notivo</p>
          </div>
          
          <div className="flex flex-col gap-3">
-           {recentAlerts.map((a, i) => {
-             const types: any = {
-               'warning': { bg: 'bg-orange-50', border: 'border-orange-500', icon: <AlertCircle className="text-orange-500"/> },
-               'info':    { bg: 'bg-blue-50', border: 'border-blue-500', icon: <Info className="text-blue-500"/> },
-               'success': { bg: 'bg-green-50', border: 'border-green-500', icon: <Check className="text-green-500"/> },
-             };
-             const t = types[a.type];
-
-             return (
-               <div key={i} className={`flex items-start gap-4 p-4 rounded-xl border-l-4 ${t.bg} ${t.border} border-t-0 border-r-0 border-b-0`}>
-                 <div className="mt-0.5">{t.icon}</div>
-                 <div className="flex-1">
-                   <div className="flex justify-between items-center mb-1">
-                     <h4 className="text-xs font-bold text-s900">{a.title}</h4>
-                     <span className="text-[10px] font-mono text-s400 uppercase">{a.time}</span>
-                   </div>
-                   <p className="text-[11px] text-s600">{a.desc}</p>
+           {recentAlerts.length === 0 ? (
+             <div className="text-center py-8 text-s400 font-mono text-xs">No alerts at this time</div>
+           ) : recentAlerts.map((a) => (
+             <div key={a.id} className={`flex items-start gap-4 p-4 rounded-xl border-l-4 bg-red-50 border-red-500 border-t-0 border-r-0 border-b-0`}>
+               <div className="mt-0.5"><AlertCircle className="text-red-500"/></div>
+               <div className="flex-1">
+                 <div className="flex justify-between items-center mb-1">
+                   <h4 className="text-xs font-bold text-s900">{a.studentName}</h4>
+                   <span className="text-[10px] font-mono text-s400 uppercase">
+                     {a.timestamp ? new Date(a.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : ''}
+                   </span>
                  </div>
+                 <p className="text-[11px] text-s600">{a.issue}</p>
+                 <p className="text-[10px] font-mono text-s400 mt-1 uppercase tracking-widest">{a.context}</p>
                </div>
-             )
-           })}
+             </div>
+           ))}
          </div>
       </div>
 

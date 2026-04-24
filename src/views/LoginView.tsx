@@ -1,24 +1,48 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FirebaseError } from 'firebase/app';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Bell, Eye, EyeOff } from 'lucide-react';
+import { firebaseAuth } from '../firebase';
 
-export function LoginView({ onLogin }: { onLogin: () => void }) {
+export function LoginView() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Using Master Credentials from prototype
-    if (email === 'admin@notivo.edu' && password === 'Notivo@2026') {
-      setError(false);
-      localStorage.setItem('notivo_auth', 'true');
-      onLogin();
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      await signInWithEmailAndPassword(firebaseAuth, email, password);
       navigate('/');
-    } else {
-      setError(true);
+    } catch (err) {
+      if (err instanceof FirebaseError) {
+        switch (err.code) {
+          case 'auth/invalid-credential':
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+            setError('Invalid email or password. Please try again.');
+            break;
+          case 'auth/invalid-email':
+            setError('Enter a valid email address.');
+            break;
+          case 'auth/too-many-requests':
+            setError('Too many attempts. Try again later.');
+            break;
+          default:
+            setError(err.message);
+        }
+      } else {
+        setError('Sign in failed. Check your Firebase configuration and try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -37,11 +61,11 @@ export function LoginView({ onLogin }: { onLogin: () => void }) {
         </div>
 
         <div className="login-title font-serif tracking-tight">Welcome Back</div>
-        <div className="login-sub uppercase tracking-[0.1em]">Sign in with master credentials</div>
+        <div className="login-sub uppercase tracking-[0.1em]">Sign in with your Firebase account</div>
 
         {error && (
           <div className="login-err animate-in slide-in-from-top-2">
-            Invalid email or password. Please try again.
+            {error}
           </div>
         )}
 
@@ -79,13 +103,13 @@ export function LoginView({ onLogin }: { onLogin: () => void }) {
             </div>
           </div>
 
-          <button type="submit" className="login-btn font-mono uppercase tracking-widest mt-4">
-            Sign In to Dashboard
+          <button type="submit" className="login-btn font-mono uppercase tracking-widest mt-4" disabled={isSubmitting}>
+            {isSubmitting ? 'Signing In...' : 'Sign In to Dashboard'}
           </button>
         </form>
 
         <div className="login-footer uppercase tracking-[0.2em] opacity-40">
-          Notivo &bull; Master Access &bull; Secure
+          Notivo &bull; Firebase Auth &bull; Secure
         </div>
       </div>
     </div>

@@ -28,7 +28,7 @@ export function SettingsView() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
          
          {/* General */}
-         <div className="bg-white border border-s200 rounded-2xl p-6 shadow-sm">
+         <div className="glass-card p-6">
             <div className="flex items-center gap-2 mb-6 border-b border-s100 pb-4">
               <Settings className="text-accent" size={20} />
               <h3 className="font-serif text-lg font-bold text-s800 tracking-tight leading-none">General</h3>
@@ -51,7 +51,7 @@ export function SettingsView() {
          </div>
 
          {/* Security */}
-         <div className="bg-white border border-s200 rounded-2xl p-6 shadow-sm">
+         <div className="glass-card p-6">
             <div className="flex items-center gap-2 mb-6 border-b border-s100 pb-4">
               <Shield className="text-accent" size={20} />
               <h3 className="font-serif text-lg font-bold text-s800 tracking-tight leading-none">Security</h3>
@@ -74,7 +74,7 @@ export function SettingsView() {
          </div>
 
          {/* Academic */}
-         <div className="bg-white border border-s200 rounded-2xl p-6 shadow-sm">
+         <div className="glass-card p-6">
             <div className="flex items-center gap-2 mb-6 border-b border-s100 pb-4">
               <GraduationCap className="text-accent" size={20} />
               <h3 className="font-serif text-lg font-bold text-s800 tracking-tight leading-none">Academic</h3>
@@ -97,7 +97,7 @@ export function SettingsView() {
          </div>
 
          {/* Integrations */}
-         <div className="bg-white border border-s200 rounded-2xl p-6 shadow-sm">
+         <div className="glass-card p-6">
             <div className="flex items-center gap-2 mb-6 border-b border-s100 pb-4">
               <Link2 className="text-accent" size={20} />
               <h3 className="font-serif text-lg font-bold text-s800 tracking-tight leading-none">Integrations</h3>

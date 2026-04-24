@@ -41,7 +41,7 @@ export function DashboardView() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Demographics SVG Chart */}
-        <div className="bg-white rounded-2xl border border-s200 p-6 shadow-sm flex flex-col justify-between">
+        <div className="glass-card p-6 flex flex-col justify-between">
           <div>
             <h3 className="font-serif text-lg font-bold text-s800 tracking-tight leading-none">Student Demographics</h3>
             <p className="text-xs text-s500 mt-1">Gender split - AY 2024-25</p>
@@ -76,7 +76,7 @@ export function DashboardView() {
         </div>
 
         {/* Top Teachers */}
-        <div className="bg-white rounded-2xl border border-s200 p-6 shadow-sm overflow-hidden flex flex-col">
+        <div className="glass-card p-6 overflow-hidden flex flex-col">
           <div className="mb-4">
             <h3 className="font-serif text-lg font-bold text-s800 tracking-tight leading-none">Top Teachers</h3>
             <p className="text-xs text-s500 mt-1">Faculty highlights</p>
@@ -114,7 +114,7 @@ export function DashboardView() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Weekly Attendance SVG Bar Chart */}
-        <div className="bg-white rounded-2xl border border-s200 p-6 shadow-sm">
+        <div className="glass-card p-6">
           <div className="mb-6">
             <h3 className="font-serif text-lg font-bold text-s800 tracking-tight leading-none">Weekly Attendance</h3>
             <p className="text-xs text-s500 mt-1">Present vs Absent</p>
@@ -171,7 +171,7 @@ export function DashboardView() {
         </div>
 
         {/* Live Alert Feed */}
-        <div className="bg-gradient-to-br from-[#fff8f3] to-[#fff5ee] border border-[#FFD4A8] rounded-2xl p-6 shadow-sm">
+        <div className="glass-card border-[#FFD4A8] p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
                <h3 className="font-serif text-lg font-bold text-[#3b1f7a] tracking-tight leading-none">Notivo Intelligence</h3>

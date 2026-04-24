@@ -20,8 +20,8 @@ function PageLayout({ children, onLogout }: { children: React.ReactNode, onLogou
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white md:p-6 lg:p-8">
-      <div className="flex flex-col md:flex-row flex-1 overflow-hidden md:rounded-2xl border border-s200 shadow-2xl relative w-full bg-s50">
+    <div className="flex h-screen overflow-hidden bg-transparent md:p-6 lg:p-8">
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden md:rounded-[32px] glass-panel relative w-full">
         
         {/* Mobile Overlay */}
         {isSidebarOpen && (
@@ -31,7 +31,7 @@ function PageLayout({ children, onLogout }: { children: React.ReactNode, onLogou
         {/* SIDEBAR */}
         <div className={`
           absolute z-50 md:relative md:translate-x-0 top-0 left-0 h-full w-[210px] 
-          bg-navy flex flex-col transition-transform duration-300 ease-in-out
+          bg-[#1A1A1A]/85 backdrop-blur-2xl flex flex-col transition-transform duration-300 ease-in-out border-r border-white/10
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}>
           <div className="flex items-center gap-3 py-5 px-4 border-b border-white/10">
@@ -70,8 +70,8 @@ function PageLayout({ children, onLogout }: { children: React.ReactNode, onLogou
         </div>
 
         {/* MAIN BODY */}
-        <div className="flex-1 flex flex-col min-w-0 bg-s50 z-0 h-full">
-          <header className="bg-white border-b border-s200 p-3 lg:px-5 flex items-center gap-3 shrink-0 z-10 sticky top-0">
+        <div className="flex-1 flex flex-col min-w-0 bg-transparent z-0 h-full">
+          <header className="bg-white/40 backdrop-blur-md border-b border-white/40 p-3 lg:px-5 flex items-center gap-3 shrink-0 z-10 sticky top-0">
             <button className="w-[34px] h-[34px] rounded-lg bg-s50 border border-s200 flex items-center justify-center md:hidden" onClick={() => setIsSidebarOpen(true)}>
               <Menu size={18} />
             </button>

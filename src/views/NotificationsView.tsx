@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Check, AlertCircle, Info, Megaphone, Calendar } from 'lucide-react';
+import { Check, AlertCircle, Megaphone, Calendar } from 'lucide-react';
 import { api } from '../api';
 import type { Alert } from '../types';
 

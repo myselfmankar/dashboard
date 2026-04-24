@@ -20,7 +20,7 @@ import { LoginView } from './views/LoginView';
 import { AuthContext } from './context/AuthContext';
 import { firebaseAuth } from './firebase';
 import { firestore } from './firebase';
-import { setApiConfig } from './api';
+import { setApiConfig, api } from './api';
 import type { UserRole, AuthUser } from './types';
 
 // ── Role-based navigation config ──
@@ -32,9 +32,10 @@ interface NavItem {
   activeBadge?: boolean;
 }
 
-function getNavItems(role: UserRole): NavItem[] {
+function getNavItems(role: UserRole, alertCount: number): NavItem[] {
+  const alertBadge = alertCount > 0 ? (alertCount > 99 ? '99+' : String(alertCount)) : undefined;
   const common: NavItem[] = [
-    { to: '/notifications', icon: <Bell size={16}/>, label: 'Alerts', badge: '5' },
+    { to: '/notifications', icon: <Bell size={16}/>, label: 'Alerts', badge: alertBadge },
     { to: '/settings', icon: <Settings size={16}/>, label: 'Settings' },
   ];
 
@@ -80,7 +81,17 @@ const ROLE_INITIALS: Record<UserRole, string> = {
 
 function PageLayout({ children, onLogout, role }: { children: React.ReactNode, onLogout: () => void, role: UserRole }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const navItems = getNavItems(role);
+  const [alertCount, setAlertCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getAlerts()
+      .then((alerts) => { if (!cancelled) setAlertCount(alerts.length); })
+      .catch(() => { /* badge stays at 0 on error */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  const navItems = getNavItems(role, alertCount);
 
   return (
     <div className="flex h-screen overflow-hidden bg-white md:p-6 lg:p-8">

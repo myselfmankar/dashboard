@@ -181,44 +181,56 @@ export const api = {
    */
   getKpis: () =>
     cache.getOrFetch('kpis', TTL.day, async () => {
-      try {
-        const [classes, insights, sessions] = await Promise.all([
-          fetchClasses(),
-          fetchEvoInsights(),
-          fetchPenSessions(),
-        ]);
+      // Use allSettled so one denied collection (e.g. penSessions without admin
+      // read rules) doesn't zero out every KPI. Each sub-query degrades
+      // independently.
+      const [classesRes, insightsRes, sessionsRes] = await Promise.allSettled([
+        fetchClasses(),
+        fetchEvoInsights(),
+        fetchPenSessions(),
+      ]);
 
-        const studentSet = new Set<string>();
-        const teacherSet = new Set<string>();
-        for (const c of classes) {
-          c.studentIds?.forEach((s) => studentSet.add(s));
-          if (c.teacherUid) teacherSet.add(c.teacherUid);
-        }
-
-        const todayStart = startOfTodayMs();
-        const penSessionsToday = sessions.filter(
-          (s) => (s.createdAt?.toMillis?.() ?? s.startTime ?? 0) >= todayStart,
-        ).length;
-        const penSessionsLive = sessions.filter((s) => s.status === 'active').length;
-
-        const atRiskStudents = new Set(
-          insights.filter((i) => i.flag === 'at_risk').map((i) => i.studentUid),
-        );
-
-        return {
-          totalStudents: studentSet.size,
-          // FIXME_SCHEMA_GROWTH: no historical snapshot to compute real % change yet.
-          totalStudentsChange: '',
-          totalTeachers: teacherSet.size,
-          totalTeachersChange: '',
-          penSessionsToday,
-          penSessionsLive,
-          studentsAtRisk: atRiskStudents.size,
-        };
-      } catch (err) {
-        console.error('getKpis failed, using empty fallback', err);
-        return FALLBACK.kpis;
+      if (classesRes.status === 'rejected') {
+        console.error('getKpis: fetchClasses failed', classesRes.reason);
       }
+      if (insightsRes.status === 'rejected') {
+        console.error('getKpis: fetchEvoInsights failed', insightsRes.reason);
+      }
+      if (sessionsRes.status === 'rejected') {
+        console.error('getKpis: fetchPenSessions failed', sessionsRes.reason);
+      }
+
+      const classes  = classesRes.status  === 'fulfilled' ? classesRes.value  : [];
+      const insights = insightsRes.status === 'fulfilled' ? insightsRes.value : [];
+      const sessions = sessionsRes.status === 'fulfilled' ? sessionsRes.value : [];
+
+      const studentSet = new Set<string>();
+      const teacherSet = new Set<string>();
+      for (const c of classes) {
+        c.studentIds?.forEach((s) => studentSet.add(s));
+        if (c.teacherUid) teacherSet.add(c.teacherUid);
+      }
+
+      const todayStart = startOfTodayMs();
+      const penSessionsToday = sessions.filter(
+        (s) => (s.createdAt?.toMillis?.() ?? s.startTime ?? 0) >= todayStart,
+      ).length;
+      const penSessionsLive = sessions.filter((s) => s.status === 'active').length;
+
+      const atRiskStudents = new Set(
+        insights.filter((i) => i.flag === 'at_risk').map((i) => i.studentUid),
+      );
+
+      return {
+        totalStudents: studentSet.size,
+        // FIXME_SCHEMA_GROWTH: no historical snapshot to compute real % change yet.
+        totalStudentsChange: '',
+        totalTeachers: teacherSet.size,
+        totalTeachersChange: '',
+        penSessionsToday,
+        penSessionsLive,
+        studentsAtRisk: atRiskStudents.size,
+      };
     }),
 
   /**

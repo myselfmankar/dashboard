@@ -86,7 +86,10 @@ export function DashboardView() {
                   <div>
                     <div className="text-xs font-bold text-s800">{d.label}</div>
                     <div className="text-[10px] font-mono text-s500 tracking-wider">
-                      {d.value.toLocaleString()} • {((d.value / data.kpis.totalStudents) * 100).toFixed(1)}%
+                      {d.value.toLocaleString()}
+                      {data.kpis.totalStudents > 0 && (
+                        <> • {((d.value / data.kpis.totalStudents) * 100).toFixed(1)}%</>
+                      )}
                     </div>
                   </div>
                 </div>

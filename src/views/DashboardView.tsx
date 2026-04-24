@@ -8,21 +8,20 @@ import type { DashboardData, AttendanceDay, Demographics, Teacher } from '../typ
 export function DashboardView() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
-
-  const attendanceData: AttendanceDay[] = [
-    { day: 'Mon', present: 345, absent: 55 },
-    { day: 'Tue', present: 370, absent: 30 },
-    { day: 'Wed', present: 355, absent: 45 },
-    { day: 'Thu', present: 380, absent: 20 },
-    { day: 'Fri', present: 330, absent: 70 },
-    { day: 'Sat', present: 290, absent: 110 },
-  ];
+  const [attendanceData, setAttendanceData] = useState<AttendanceDay[]>([]);
 
   useEffect(() => {
-    Promise.all([api.getKpis(), api.getAlerts(), api.getDemographics(), api.getTeachers()])
-      .then(([kpis, alerts, demographics, teacherList]) => {
+    Promise.all([
+      api.getKpis(),
+      api.getAlerts(),
+      api.getDemographics(),
+      api.getTeachers(),
+      api.getWeeklyAttendance(),
+    ])
+      .then(([kpis, alerts, demographics, teacherList, attendance]) => {
         setData({ kpis, alerts, demographics });
         setTeachers(teacherList);
+        setAttendanceData(attendance);
       })
       .catch(console.error);
   }, []);
@@ -51,8 +50,8 @@ export function DashboardView() {
         {/* Demographics Donut Chart */}
         <div className="bg-white rounded-2xl border border-s200 p-6 shadow-sm flex flex-col justify-between">
           <div>
-            <h3 className="font-serif text-lg font-bold text-s800 tracking-tight leading-none">Student Demographics</h3>
-            <p className="text-xs text-s500 mt-1">Gender split - AY 2024-25</p>
+            <h3 className="font-serif text-lg font-bold text-s800 tracking-tight leading-none">Today's Engagement</h3>
+            <p className="text-xs text-s500 mt-1">Attending vs Absent • Pen-session activity</p>
           </div>
           <div className="flex items-center justify-center mt-4 mb-2 gap-6">
             <ResponsiveContainer width={180} height={180}>

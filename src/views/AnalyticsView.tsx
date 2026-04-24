@@ -11,6 +11,9 @@ export function AnalyticsView() {
   const [concepts, setConcepts] = useState<WeakConcept[]>([]);
   const [students, setStudents] = useState<HeatmapStudent[]>([]);
   const [teachersPerf, setTeachersPerf] = useState<{name:string;issues:number;total:number;avgScore:number}[]>([]);
+  const [kpis, setKpis] = useState<{atRisk:number;needingAttention:number;avgClassScore:number;activeSessions:number}>({
+    atRisk: 0, needingAttention: 0, avgClassScore: 0, activeSessions: 0,
+  });
 
   const allStudents: HeatmapStudent[] = students;
 
@@ -19,9 +22,11 @@ export function AnalyticsView() {
       api.getWeakConcepts(),
       api.getStudentsWithRisk(),
       api.getTeachers(),
-    ]).then(([c, studs, tList]) => {
+      api.getAnalyticsKpis(),
+    ]).then(([c, studs, tList, k]) => {
       setConcepts(c);
       setStudents(studs);
+      setKpis(k);
       const avgScore = studs.length > 0 ? Math.round(studs.reduce((a, s) => a + s.score, 0) / studs.length) : 0;
       setTeachersPerf(tList.map((t) => ({
         name: t.name,
@@ -57,10 +62,10 @@ export function AnalyticsView() {
 
       {/* Analytics KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiItem title="AT-RISK STUDENTS" mtc="red" value="12" trend="Need immediate attention" icon={<AlertTriangle/>} isDown />
-        <KpiItem title="NEEDING ATTENTION" mtc="amber" value="42" trend="Hesitation above baseline" icon={<AlertCircle/>} isDown />
-        <KpiItem title="AVG CLASS SCORE" mtc="blue" value="71%" trend="Across all tracked classes" icon={<BarChartIcon/>} />
-        <KpiItem title="ACTIVE SESSIONS" mtc="green" value="5" trend="Classes using smart pens today" icon={<MonitorPlay/>} />
+        <KpiItem title="AT-RISK STUDENTS" mtc="red" value={kpis.atRisk} trend="Need immediate attention" icon={<AlertTriangle/>} isDown />
+        <KpiItem title="NEEDING ATTENTION" mtc="amber" value={kpis.needingAttention} trend="Hesitation above baseline" icon={<AlertCircle/>} isDown />
+        <KpiItem title="AVG CLASS SCORE" mtc="blue" value={`${kpis.avgClassScore}%`} trend="Across all tracked classes" icon={<BarChartIcon/>} />
+        <KpiItem title="ACTIVE SESSIONS" mtc="green" value={kpis.activeSessions} trend="Classes using smart pens today" icon={<MonitorPlay/>} />
       </div>
 
       {/* Middle Grid */}

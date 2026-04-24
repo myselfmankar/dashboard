@@ -261,20 +261,38 @@ export const api = {
     }),
 
   /**
-   * Student gender / section demographics.
-   * FIXME_SCHEMA_DEMOGRAPHICS: users docs have no gender/section field. Ask
-   * backend to add `gender` (and optionally `grade`, `section`) on `users`
-   * docs where `role == "student"`.
+   * Today's engagement split: Attending vs Absent.
+   *
+   * "Attending" = students with at least one pen session today.
+   * "Absent"    = remaining students in the institute.
+   *
+   * Backed by `penSessions` (proxy for attendance until we get a dedicated
+   * attendance collection). The donut on the Dashboard renders this.
    */
   getDemographics: () =>
     cache.getOrFetch('demographics', TTL.day, async () => {
-      try {
-        const classes = await fetchClasses();
-        const total = classes.reduce((n, c) => n + (c.studentIds?.length ?? 0), 0);
-        return [{ label: 'Students', value: total }];
-      } catch {
-        return FALLBACK.demographics;
+      const [classesRes, sessionsRes] = await Promise.allSettled([
+        fetchClasses(),
+        fetchPenSessions(),
+      ]);
+      const classes  = classesRes.status  === 'fulfilled' ? classesRes.value  : [];
+      const sessions = sessionsRes.status === 'fulfilled' ? sessionsRes.value : [];
+
+      const totalUids = new Set(classes.flatMap((c) => c.studentIds ?? []));
+      const total = totalUids.size;
+      if (total === 0) return FALLBACK.demographics;
+
+      const todayStart = startOfTodayMs();
+      const attendingUids = new Set<string>();
+      for (const s of sessions) {
+        const ts = s.createdAt?.toMillis?.() ?? s.startTime ?? 0;
+        if (ts >= todayStart && totalUids.has(s.studentUid)) attendingUids.add(s.studentUid);
       }
+      const attending = attendingUids.size;
+      return [
+        { label: 'Attending', value: attending },
+        { label: 'Absent',    value: Math.max(0, total - attending) },
+      ];
     }),
 
   /**
@@ -438,6 +456,107 @@ export const api = {
         console.error('getWeakConcepts failed, using empty fallback', err);
         return FALLBACK.weakConceptAnalytics;
       }
+    }),
+
+  /**
+   * Weekly attendance derived from `penSessions`.
+   *
+   * A student is marked "present" on a given day if they have at least one
+   * pen session whose start or createdAt falls on that calendar day. "Absent"
+   * is the total-student count minus present. Returns 6 calendar days ending
+   * today (Mon–Sat display).
+   *
+   * This is a proxy metric — truly accurate attendance needs a dedicated
+   * collection, but it's the best we can derive from current schema.
+   * FIXME_SCHEMA_ATTENDANCE: replace with real `attendance` docs when backend adds them.
+   */
+  getWeeklyAttendance: () =>
+    cache.getOrFetch('weeklyAttendance', TTL.day, async () => {
+      const [classesRes, sessionsRes] = await Promise.allSettled([
+        fetchClasses(),
+        fetchPenSessions(),
+      ]);
+      const classes  = classesRes.status === 'fulfilled'  ? classesRes.value  : [];
+      const sessions = sessionsRes.status === 'fulfilled' ? sessionsRes.value : [];
+
+      const totalStudents = new Set(classes.flatMap((c) => c.studentIds ?? [])).size;
+      if (totalStudents === 0) return [];
+
+      // Build 6-day window ending today.
+      const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const out: Array<{ day: string; present: number; absent: number }> = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        d.setDate(d.getDate() - i);
+        const dayStart = d.getTime();
+        const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+
+        const presentUids = new Set<string>();
+        for (const s of sessions) {
+          const ts = s.createdAt?.toMillis?.() ?? s.startTime ?? 0;
+          if (ts >= dayStart && ts < dayEnd) presentUids.add(s.studentUid);
+        }
+        const present = presentUids.size;
+        out.push({
+          day: dayLabels[d.getDay()],
+          present,
+          absent: Math.max(0, totalStudents - present),
+        });
+      }
+      return out;
+    }),
+
+  /**
+   * KPIs for the Pen Analytics page.
+   *
+   * - atRisk: distinct students flagged `at_risk` in evo_insights.
+   * - needingAttention: students with risk tier 2–3 in the heatmap (not critical, but not safe).
+   * - avgClassScore: mean of per-student comprehension scores (0–100).
+   * - activeSessions: pen sessions with status === 'active'.
+   */
+  getAnalyticsKpis: () =>
+    cache.getOrFetch('analyticsKpis', TTL.day, async () => {
+      const [classesRes, insightsRes, sessionsRes] = await Promise.allSettled([
+        fetchClasses(),
+        fetchEvoInsights(),
+        fetchPenSessions(),
+      ]);
+      const classes  = classesRes.status  === 'fulfilled' ? classesRes.value  : [];
+      const insights = insightsRes.status === 'fulfilled' ? insightsRes.value : [];
+      const sessions = sessionsRes.status === 'fulfilled' ? sessionsRes.value : [];
+
+      // Aggregate per student: at-risk count + avg severity score.
+      const perStudent = new Map<string, { atRiskCount: number; sevTotal: number; sevCount: number }>();
+      for (const ins of insights) {
+        const uid = ins.studentUid;
+        const entry = perStudent.get(uid) ?? { atRiskCount: 0, sevTotal: 0, sevCount: 0 };
+        if (ins.flag === 'at_risk') entry.atRiskCount++;
+        for (const tag of ins.errorTags ?? []) {
+          entry.sevTotal += severityToScore(parseErrorTag(tag).severity);
+          entry.sevCount++;
+        }
+        perStudent.set(uid, entry);
+      }
+
+      const allStudents = new Set(classes.flatMap((c) => c.studentIds ?? []));
+      let atRisk = 0;
+      let needingAttention = 0;
+      let scoreSum = 0;
+      let scoreN = 0;
+      for (const uid of allStudents) {
+        const p = perStudent.get(uid);
+        const score = p && p.sevCount > 0 ? p.sevTotal / p.sevCount : 75;
+        scoreSum += score;
+        scoreN += 1;
+        if (p && p.atRiskCount > 0) atRisk++;
+        else if (score < 70) needingAttention++;
+      }
+
+      const avgClassScore = scoreN > 0 ? Math.round(scoreSum / scoreN) : 0;
+      const activeSessions = sessions.filter((s) => s.status === 'active').length;
+
+      return { atRisk, needingAttention, avgClassScore, activeSessions };
     }),
 };
 

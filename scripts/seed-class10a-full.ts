@@ -216,33 +216,66 @@ async function main() {
   await classBatch.commit();
 
   // ── 5. Seed pen sessions ─────────────────────────────────────────────────
+  // Uses deterministic doc IDs (`sess_{uid}_{classId}_{daysBack}`) so re-runs
+  // overwrite instead of duplicating. Attendance is intentionally patchy so
+  // the dashboard's Engagement donut and Weekly Attendance show real absences.
   console.log('\nStep 5: Seeding pen sessions...');
-  const sessionSubjects: Array<{classId: string; subject: string}> = [
-    { classId: 'class_10A',       subject: 'Physics'     },
-    { classId: '10A_Mathematics', subject: 'Mathematics' },
-    { classId: '10A_Chemistry',   subject: 'Chemistry'   },
+
+  // Wipe previous auto-id sessions so the dataset is clean. Deterministic
+  // sessions below will be re-created idempotently.
+  const oldSessionsSnap = await db.collection('penSessions').get();
+  if (oldSessionsSnap.size > 0) {
+    console.log(`  Clearing ${oldSessionsSnap.size} old sessions...`);
+    const delBatch = db.batch();
+    oldSessionsSnap.docs.forEach((d) => delBatch.delete(d.ref));
+    await delBatch.commit();
+  }
+
+  // Per-day attendance patterns (who shows up on which day).
+  // [daysBack, durationMins, strokes, pressure, liftCount, pages, attendeeIndexes]
+  type DayPattern = readonly [number, number, number, number, number, number, readonly number[]];
+  // Student indexes (0–9) in ALL_STUDENTS:
+  //   0 Atharv  1 Sakshi  2 Arjun   3 Priya    4 Rahul
+  //   5 Ananya  6 Rohan   7 Sneha   8 Karan    9 Divya
+  const mathDays: DayPattern[] = [
+    [0,  45, 420, 0.72, 34, 3, [0, 2, 3, 5, 6, 7, 9]],          // today: Rahul(4), Karan(8), Sakshi(1) absent
+    [1,  45, 380, 0.65, 51, 3, [0, 1, 2, 5, 6, 7, 8, 9]],       // yday: Priya(3), Rahul(4) absent
+    [2,  45, 350, 0.60, 45, 3, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]], // 2d: full attendance
+    [3,  45, 290, 0.41, 88, 2, [0, 1, 2, 3, 4, 5, 7, 8, 9]],    // 3d: Rohan(6) absent
+    [4,  45, 310, 0.55, 60, 3, [0, 1, 2, 4, 5, 6, 7, 8]],       // 4d: Priya(3), Divya(9) absent
+    [5,  45, 340, 0.62, 50, 3, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]], // 5d: full
   ];
-  const sessionPresets = [
-    // [daysBack, durationMins, totalStrokes, avgPressure, penLiftCount, pagesFilled]
-    [0,  45, 420, 0.72, 34, 3],   // today — completed this morning
-    [1,  45, 380, 0.65, 51, 3],   // yesterday
-    [3,  45, 290, 0.41, 88, 2],   // 3 days ago, high pen-lifts = confusion
-  ] as const;
+  const chemDays: DayPattern[] = [
+    [0,  40, 360, 0.68, 38, 2, [0, 1, 3, 5, 6, 9]],             // today: (plus Arjun live) — Rahul(4), Sneha(7), Karan(8) stay absent
+    [2,  40, 320, 0.58, 55, 2, [0, 1, 2, 3, 4, 6, 7, 8]],
+    [4,  40, 300, 0.52, 60, 2, [1, 2, 3, 5, 6, 7, 8, 9]],
+  ];
+  const physDays: DayPattern[] = [
+    [1,  50, 400, 0.70, 42, 3, [0, 1, 2, 3, 5, 6, 8, 9]],       // yday: 8 present
+    [3,  50, 340, 0.55, 70, 2, [0, 2, 3, 4, 5, 7, 8, 9]],
+  ];
+
+  const subjectGroups = [
+    { classId: '10A_Mathematics', subject: 'Mathematics', days: mathDays },
+    { classId: '10A_Chemistry',   subject: 'Chemistry',   days: chemDays },
+    { classId: 'class_10A',       subject: 'Physics',     days: physDays },
+  ];
 
   let sessionCount = 0;
-  for (const uid of ALL_STUDENTS) {
-    for (let i = 0; i < sessionSubjects.length; i++) {
-      const { classId, subject } = sessionSubjects[i];
-      const [daysBack, dur, strokes, pressure, lifts, pages] = sessionPresets[i];
-      await db.collection('penSessions').doc().set(
-        makePenSession(uid, classId, subject, daysBack, dur, strokes, pressure, lifts, pages)
-      );
-      sessionCount++;
+  for (const grp of subjectGroups) {
+    for (const [daysBack, dur, strokes, pressure, lifts, pages, attendees] of grp.days) {
+      for (const idx of attendees) {
+        const uid = ALL_STUDENTS[idx];
+        const id = `sess_${uid}_${grp.classId}_${daysBack}`;
+        await db.collection('penSessions').doc(id).set(
+          makePenSession(uid, grp.classId, grp.subject, daysBack, dur, strokes, pressure, lifts, pages)
+        );
+        sessionCount++;
+      }
     }
   }
 
-  // Add a handful of "active" sessions so the Live Sessions KPI has a pulse.
-  // These are in-progress writing sessions right now (no endTime, status=active).
+  // Active "live" sessions — started in the last 15 minutes, not yet ended.
   const liveStudents = ALL_STUDENTS.slice(0, 3);
   const liveSubjects = [
     { classId: '10A_Mathematics', subject: 'Mathematics' },
@@ -253,7 +286,7 @@ async function main() {
     const uid = liveStudents[i];
     const { classId, subject } = liveSubjects[i];
     const startMs = Date.now() - (10 + i * 3) * 60 * 1000; // started 10-16 min ago
-    await db.collection('penSessions').doc().set({
+    await db.collection('penSessions').doc(`sess_live_${uid}_${classId}`).set({
       studentUid:         uid,
       classId,
       subject,

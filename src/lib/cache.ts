@@ -16,7 +16,7 @@
 // Bump the version suffix whenever the shape of cached values changes so that
 // stale entries from previous deploys are ignored (they just won't match the
 // new prefix and expire naturally).
-const PREFIX = 'notivo.cache.v2:';
+const PREFIX = 'notivo.cache.v4:';
 
 type Entry<T> = {
   v: T;

@@ -67,11 +67,14 @@ export function ParentsView() {
               No children linked to this parent account yet.
             </div>
           ) : children.map((child) => (
-            <ChildPreviewCard
-              key={child.uid}
-              child={child}
-              onViewMore={() => setActiveUid(child.uid)}
-            />
+            child.uid ? (
+              <ChildPreviewCard
+                key={child.uid}
+                child={child}
+                uid={child.uid}
+                onViewMore={() => setActiveUid(child.uid!)}
+              />
+            ) : null
           ))}
         </div>
 
@@ -89,9 +92,11 @@ export function ParentsView() {
 
 function ChildPreviewCard({
   child,
+  uid,
   onViewMore,
 }: {
   child: HeatmapStudent;
+  uid: string;
   onViewMore: () => void;
 }) {
   return (
@@ -102,7 +107,7 @@ function ChildPreviewCard({
           Risk Tier: <span className="text-s700 font-bold">{child.risk}</span>
         </span>
       </div>
-      <StudentInlinePreview uid={child.uid} onViewMore={onViewMore} />
+      <StudentInlinePreview uid={uid} onViewMore={onViewMore} />
     </div>
   );
 }

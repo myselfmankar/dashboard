@@ -2,6 +2,11 @@
 
 @import "tailwindcss";
 
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 @theme {
   --color-navy: #1A1A1A;
   --color-accent: #F47B20;

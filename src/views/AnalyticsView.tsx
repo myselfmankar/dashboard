@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { Sparkles, AlertTriangle, AlertCircle, BarChart as BarChartIcon, MonitorPlay } from 'lucide-react';
 import { KpiItem } from '../components/KpiItem';
+import { StudentDetailModal } from '../components/StudentDetailModal';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import type { WeakConcept, HeatmapStudent } from '../types';
 
@@ -11,6 +12,7 @@ export function AnalyticsView() {
   const [concepts, setConcepts] = useState<WeakConcept[]>([]);
   const [students, setStudents] = useState<HeatmapStudent[]>([]);
   const [teachersPerf, setTeachersPerf] = useState<{name:string;issues:number;total:number;avgScore:number}[]>([]);
+  const [activeUid, setActiveUid] = useState<string | null>(null);
   const [kpis, setKpis] = useState<{atRisk:number;needingAttention:number;avgClassScore:number;activeSessions:number}>({
     atRisk: 0, needingAttention: 0, avgClassScore: 0, activeSessions: 0,
   });
@@ -233,7 +235,12 @@ export function AnalyticsView() {
              }
              
              return (
-               <div key={i} className={`${baseStyles} ${colorStyles}`}>
+               <div
+                 key={i}
+                 onClick={() => s.uid && setActiveUid(s.uid)}
+                 title={s.uid ? `Click to view ${s.name}'s details` : 'No detail available'}
+                 className={`${baseStyles} ${colorStyles}`}
+               >
                  <div className={`text-[10px] md:text-[11px] font-bold leading-none mb-1 ${nameColor}`}>
                    {s.name.split(' ')[0]}
                  </div>
@@ -247,6 +254,7 @@ export function AnalyticsView() {
 
       </div>
 
+      <StudentDetailModal uid={activeUid} onClose={() => setActiveUid(null)} />
     </div>
   );
 }

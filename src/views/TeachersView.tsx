@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BookOpen, Users, TrendingUp, ClipboardList } from 'lucide-react';
 import { KpiItem } from '../components/KpiItem';
+import { HeatmapWithInsights } from '../components/HeatmapWithInsights';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 import type { HeatmapStudent } from '../types';
@@ -67,97 +68,31 @@ export function TeachersView() {
           <KpiItem title="Pending Reviews" mtc="amber" value={pendingReviews} trend="Action needed" icon={<ClipboardList/>} isDown />
         </div>
 
-        {/* Heatmap & Alerts */}
-        <div className="bg-white border border-s200 rounded-2xl p-5 shadow-sm">
-           <div className="flex items-center justify-between mb-4">
+        {/* Heatmap & Insights — independent reusable widget */}
+        <HeatmapWithInsights
+          students={students}
+          subtitle="Real-time pen behaviour • Grade 10-A • Mathematics • Today"
+          emptyRightSlot={
+            <>
+              <div className="bg-s50 border border-s100 rounded-xl p-4 flex-1 flex flex-col justify-center items-center text-center text-xs text-s400">
+                Click any student cell to view pen analytics
+              </div>
               <div>
-                <h3 className="font-serif text-lg font-bold text-s800 tracking-tight">Class Struggle Heatmap</h3>
-                <p className="text-[10px] font-mono text-s400 uppercase mt-1">Real-time pen behaviour • Grade 10-A • Mathematics • Today <span className="bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full ml-2">LIVE</span></p>
+                <div className="text-[10px] font-mono text-s400 uppercase tracking-widest mb-2 border-b border-s100 pb-1">Live Alert Feed</div>
+                {students.filter((s) => s.risk >= 4).length === 0 ? (
+                  <div className="bg-green-50 border border-green-100 rounded-lg p-3 text-xs text-green-700 font-mono">No critical alerts</div>
+                ) : (
+                  <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-xs shadow-sm">
+                    <div className="font-bold text-s900 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-red-500" /> {students.find((s) => s.risk >= 4)?.name}
+                    </div>
+                    <div className="text-[11px] text-s600 mt-1 leading-snug">Risk level {students.find((s) => s.risk >= 4)?.risk} • Score {students.find((s) => s.risk >= 4)?.score}%</div>
+                  </div>
+                )}
               </div>
-           </div>
-           
-           <div className="flex gap-4 mb-4 text-[10px] font-mono text-s500">
-             <span className="flex items-center"><div className="w-2.5 h-2.5 bg-green-100 border border-green-200 rounded-sm mr-1.5"/>On Track</span>
-             <span className="flex items-center"><div className="w-2.5 h-2.5 bg-yellow-100 border border-yellow-200 rounded-sm mr-1.5"/>Watch</span>
-             <span className="flex items-center"><div className="w-2.5 h-2.5 bg-orange-100 border border-orange-200 rounded-sm mr-1.5"/>Needs Help</span>
-             <span className="flex items-center"><div className="w-2.5 h-2.5 bg-red-100 border border-red-200 rounded-sm mr-1.5"/>At Risk</span>
-             <span className="flex items-center"><div className="w-2.5 h-2.5 bg-red-500 border border-red-600 rounded-sm mr-1.5"/>Critical</span>
-           </div>
-
-           <div className="flex flex-col md:flex-row gap-6">
-              <div className="flex-1 grid grid-cols-5 sm:grid-cols-8 gap-1">
-                 {students.length === 0 ? (
-                   <div className="col-span-8 py-8 text-center text-xs text-s400 font-mono">Loading student data…</div>
-                 ) : students.map((s, i) => {
-                   let baseStyles = "w-full aspect-square rounded-md border flex flex-col justify-center items-center hover:brightness-95 transition-all cursor-pointer shadow-sm relative overflow-hidden";
-                   let colorStyles = "";
-                   let nameColor = "";
-                   let scoreColor = "";
-
-                   switch(s.risk) {
-                     case 0:
-                       colorStyles = "bg-green-100 border-green-200";
-                       nameColor = "text-green-800";
-                       scoreColor = "text-green-700 bg-green-200/50";
-                       break;
-                     case 1:
-                       colorStyles = "bg-yellow-100 border-yellow-200";
-                       nameColor = "text-yellow-800";
-                       scoreColor = "text-yellow-700 bg-yellow-200/50";
-                       break;
-                     case 2:
-                       colorStyles = "bg-orange-100 border-orange-200";
-                       nameColor = "text-orange-800";
-                       scoreColor = "text-orange-700 bg-orange-200/50";
-                       break;
-                     case 3:
-                       colorStyles = "bg-red-100 border-red-200 font-bold";
-                       nameColor = "text-red-800";
-                       scoreColor = "text-red-700 bg-red-200/50";
-                       break;
-                     case 4:
-                     case 5:
-                       colorStyles = "bg-red-500 border-red-600 font-bold animate-pulse text-white shadow-md shadow-red-500/20";
-                       nameColor = "text-white";
-                       scoreColor = "text-red-100 bg-red-600/50";
-                       break;
-                     default:
-                       colorStyles = "bg-green-100 border-green-200";
-                   }
-                   
-                   return (
-                     <div key={i} className={`${baseStyles} ${colorStyles}`}>
-                       <div className={`text-[10px] md:text-[11px] font-bold leading-none mb-1 ${nameColor}`}>
-                         {s.name.split(' ')[0]}
-                       </div>
-                       <div className={`text-[8px] md:text-[9px] font-mono tracking-widest uppercase px-1 rounded-sm ${scoreColor}`}>
-                         {s.score}%
-                       </div>
-                     </div>
-                   )
-                 })}
-              </div>
-
-              <div className="w-full md:w-[280px] flex flex-col gap-4">
-                 <div className="bg-s50 border border-s100 rounded-xl p-4 flex-1 flex flex-col justify-center items-center text-center text-xs text-s400">
-                    Click any student cell to view pen analytics
-                 </div>
-                 <div>
-                    <div className="text-[10px] font-mono text-s400 uppercase tracking-widest mb-2 border-b border-s100 pb-1">Live Alert Feed</div>
-                    {students.filter((s) => s.risk >= 4).length === 0 ? (
-                      <div className="bg-green-50 border border-green-100 rounded-lg p-3 text-xs text-green-700 font-mono">No critical alerts</div>
-                    ) : (
-                      <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-xs shadow-sm">
-                        <div className="font-bold text-s900 flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-red-500" /> {students.find((s) => s.risk >= 4)?.name}
-                        </div>
-                        <div className="text-[11px] text-s600 mt-1 leading-snug">Risk level {students.find((s) => s.risk >= 4)?.risk} • Score {students.find((s) => s.risk >= 4)?.score}%</div>
-                      </div>
-                    )}
-                 </div>
-              </div>
-           </div>
-        </div>
+            </>
+          }
+        />
 
       </div>
 
@@ -222,7 +157,6 @@ export function TeachersView() {
            </div>
         </div>
       </div>
-
     </div>
   );
 }

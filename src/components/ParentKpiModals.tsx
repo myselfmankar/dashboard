@@ -37,9 +37,9 @@ export function ParentKpiModals({ active, onClose }: Props) {
             const theme = EVENT_TYPE_THEME[e.type];
             return (
               <KpiRow key={i}>
-                <KpiCell><KpiPill bg="#fff7ed" fg="#c2410c">{formatShortDate(e.date)}</KpiPill></KpiCell>
+                <KpiCell><KpiPill bg="#F47B20" fg="#ffffff">{formatShortDate(e.date)}</KpiPill></KpiCell>
                 <KpiCell color="#1e293b" bold>{e.title}</KpiCell>
-                <KpiCell><KpiPill bg={`${theme.dot}1f`} fg={theme.dot}>{theme.label}</KpiPill></KpiCell>
+                <KpiCell><KpiPill bg={theme.dot} fg="#ffffff">{theme.label}</KpiPill></KpiCell>
                 <KpiCell color="#64748b">{e.venue}</KpiCell>
                 <KpiCell color="#64748b" mono>{relativeDayLabel(e.date)}</KpiCell>
               </KpiRow>
@@ -57,12 +57,12 @@ export function ParentKpiModals({ active, onClose }: Props) {
         <KpiTable headers={['Date', 'Subject', 'Class', 'Duration', 'Status']}>
           {UPCOMING_EXAMS.map((e, i) => (
             <KpiRow key={i}>
-              <KpiCell><KpiPill bg="#ecfdf5" fg="#065f46">{e.date}</KpiPill></KpiCell>
+              <KpiCell><KpiPill bg="#10b981" fg="#ffffff">{e.date}</KpiPill></KpiCell>
               <KpiCell color="#1e293b" bold>{e.subject}</KpiCell>
               <KpiCell color="#64748b">{e.className}</KpiCell>
               <KpiCell color="#64748b" mono>{e.duration}</KpiCell>
               <KpiCell>
-                <KpiPill bg="#fef3c7" fg="#92400e">{e.status}</KpiPill>
+                <KpiPill bg="#f59e0b" fg="#ffffff">{e.status}</KpiPill>
               </KpiCell>
             </KpiRow>
           ))}
@@ -82,7 +82,7 @@ export function ParentKpiModals({ active, onClose }: Props) {
               <KpiCell color="#1e293b" bold>{r.subject}</KpiCell>
               <KpiCell color="#64748b">{r.test}</KpiCell>
               <KpiCell color={r.score >= 80 ? '#22c55e' : r.score >= 60 ? '#f59e0b' : '#ef4444'} bold mono>{r.score}%</KpiCell>
-              <KpiCell><KpiPill bg={`${gradeColor(r.grade)}22`} fg={gradeColor(r.grade)}>{r.grade}</KpiPill></KpiCell>
+              <KpiCell><KpiPill bg={gradeColor(r.grade)} fg="#ffffff">{r.grade}</KpiPill></KpiCell>
             </KpiRow>
           ))}
         </KpiTable>

@@ -40,9 +40,9 @@ export function AdminKpiModals({ active, students, onClose }: Props) {
               <KpiRow key={s.uid ?? i}>
                 <KpiCell color="#1e293b" bold>{s.name}</KpiCell>
                 <KpiCell>
-                  <KpiPill bg="#fee2e2" fg="#b91c1c">Tier {s.risk}</KpiPill>
+                  <KpiPill bg="#ef4444" fg="#ffffff">Tier {s.risk}</KpiPill>
                 </KpiCell>
-                <KpiCell color="#ef4444" bold mono>{s.score}%</KpiCell>
+                <KpiCell color="#dc2626" bold mono>{s.score}%</KpiCell>
                 <KpiCell color="#64748b" mono>{s.hesitation ?? '—'}</KpiCell>
                 <KpiCell color="#475569">{s.insight ?? 'Pen-behaviour anomaly detected'}</KpiCell>
               </KpiRow>
@@ -65,9 +65,9 @@ export function AdminKpiModals({ active, students, onClose }: Props) {
               <KpiRow key={s.uid ?? i}>
                 <KpiCell color="#1e293b" bold>{s.name}</KpiCell>
                 <KpiCell>
-                  <KpiPill bg="#fef3c7" fg="#92400e">Tier {s.risk}</KpiPill>
+                  <KpiPill bg="#f59e0b" fg="#ffffff">Tier {s.risk}</KpiPill>
                 </KpiCell>
-                <KpiCell color="#f59e0b" bold mono>{s.score}%</KpiCell>
+                <KpiCell color="#d97706" bold mono>{s.score}%</KpiCell>
                 <KpiCell color="#64748b" mono>{s.hesitation ?? '—'}</KpiCell>
                 <KpiCell color="#64748b" mono>{s.crossouts ?? 0}</KpiCell>
               </KpiRow>
@@ -87,7 +87,7 @@ export function AdminKpiModals({ active, students, onClose }: Props) {
             <KpiRow key={b.label}>
               <KpiCell color="#1e293b" bold>{b.label}</KpiCell>
               <KpiCell color="#1e293b" bold mono>{b.count}</KpiCell>
-              <KpiCell><KpiPill bg={`${b.color}22`} fg={b.color}>{b.grade}</KpiPill></KpiCell>
+              <KpiCell><KpiPill bg={b.color} fg="#ffffff">{b.grade}</KpiPill></KpiCell>
               <KpiCell><KpiBar pct={b.pct} color={b.color} /></KpiCell>
             </KpiRow>
           ))}
@@ -103,12 +103,12 @@ export function AdminKpiModals({ active, students, onClose }: Props) {
         <KpiTable headers={['Class', 'Teacher', 'Subject', 'Students', 'Status']}>
           {ACTIVE_SESSIONS.map((r) => (
             <KpiRow key={r.className}>
-              <KpiCell><KpiPill bg="#f1f5f9" fg="#334155">{r.className}</KpiPill></KpiCell>
+              <KpiCell><KpiPill bg="#eef2ff" fg="#4338ca">{r.className}</KpiPill></KpiCell>
               <KpiCell color="#1e293b" bold>{r.teacher}</KpiCell>
               <KpiCell color="#64748b">{r.subject}</KpiCell>
               <KpiCell color="#F47B20" bold mono>{r.students}</KpiCell>
               <KpiCell>
-                <KpiPill bg="#dcfce7" fg="#15803d">● {r.status}</KpiPill>
+                <KpiPill bg="#22c55e" fg="#ffffff">● {r.status}</KpiPill>
               </KpiCell>
             </KpiRow>
           ))}

@@ -99,11 +99,23 @@ function PageLayout({ children, onLogout, role }: { children: React.ReactNode, o
         )}
 
         {/* SIDEBAR */}
-        <div className={`
-          absolute z-50 md:relative md:translate-x-0 top-0 left-0 h-full w-[210px] 
-          bg-[#1A1A1A]/85 backdrop-blur-2xl flex flex-col transition-transform duration-300 ease-in-out border-r border-white/10
+        <div
+          className={`
+          absolute z-50 md:relative md:translate-x-0 top-0 left-0 h-full w-[210px]
+          backdrop-blur-2xl flex flex-col transition-transform duration-300 ease-in-out border-r border-white/10
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}>
+        `}
+          style={{
+            // Deep midnight base with a warm Notivo-orange glow bleeding from
+            // top-left and bottom-right — keeps text legible while shaking off
+            // the flat-black SaaS feel.
+            backgroundImage: [
+              'radial-gradient(120% 60% at 0% 0%, rgba(244,123,32,0.22), transparent 60%)',
+              'radial-gradient(90% 50% at 100% 100%, rgba(244,123,32,0.16), transparent 65%)',
+              'linear-gradient(180deg, #1f1208 0%, #18120e 45%, #120a05 100%)',
+            ].join(', '),
+          }}
+        >
           <div className="flex items-center gap-3 py-5 px-4 border-b border-white/10">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FFAA6E] to-accent flex items-center justify-center shrink-0">
               <School className="w-5 h-5 text-white" />

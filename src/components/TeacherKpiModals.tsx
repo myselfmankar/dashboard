@@ -52,7 +52,7 @@ export function TeacherKpiModals({ active, students, onClose }: Props) {
           <KpiTable headers={['Class', 'Subject', 'Students', 'Days', 'Time']}>
             {classes.map((c) => (
               <KpiRow key={c.classId}>
-                <KpiCell><KpiPill bg="#f1f5f9" fg="#334155">{c.className}</KpiPill></KpiCell>
+                <KpiCell><KpiPill bg="#eef2ff" fg="#4338ca">{c.className}</KpiPill></KpiCell>
                 <KpiCell color="#1e293b" bold>{c.subject}</KpiCell>
                 <KpiCell color="#F47B20" bold mono>{c.students}</KpiCell>
                 <KpiCell color="#64748b">{c.days}</KpiCell>
@@ -72,7 +72,7 @@ export function TeacherKpiModals({ active, students, onClose }: Props) {
         <KpiTable headers={['Class', 'Total', 'Present', 'Absent', 'Rate']}>
           {ATTENDANCE_SAMPLE.map((r) => (
             <KpiRow key={r.className}>
-              <KpiCell><KpiPill bg="#f1f5f9" fg="#334155">{r.className}</KpiPill></KpiCell>
+              <KpiCell><KpiPill bg="#eef2ff" fg="#4338ca">{r.className}</KpiPill></KpiCell>
               <KpiCell color="#64748b">{r.total}</KpiCell>
               <KpiCell color="#22c55e" bold>{r.present}</KpiCell>
               <KpiCell color="#ef4444" bold>{r.absent}</KpiCell>
@@ -93,7 +93,7 @@ export function TeacherKpiModals({ active, students, onClose }: Props) {
             <KpiRow key={b.label}>
               <KpiCell color="#1e293b" bold>{b.label}</KpiCell>
               <KpiCell color="#1e293b" bold mono>{b.count}</KpiCell>
-              <KpiCell><KpiPill bg={`${b.color}22`} fg={b.color}>{b.grade}</KpiPill></KpiCell>
+              <KpiCell><KpiPill bg={b.color} fg="#ffffff">{b.grade}</KpiPill></KpiCell>
               <KpiCell><KpiBar pct={b.pct} color={b.color} /></KpiCell>
             </KpiRow>
           ))}
@@ -117,7 +117,7 @@ export function TeacherKpiModals({ active, students, onClose }: Props) {
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>{t.title}</div>
                 <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{t.meta}</div>
               </div>
-              <KpiPill bg="#fef3c7" fg="#92400e">Pending</KpiPill>
+              <KpiPill bg="#f59e0b" fg="#ffffff">Pending</KpiPill>
             </div>
           ))}
         </div>

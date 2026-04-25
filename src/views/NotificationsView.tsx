@@ -1,8 +1,13 @@
+<<<<<<< HEAD
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check, AlertTriangle, AlertCircle, Info, Megaphone, Calendar,
   Filter, BellOff, ChevronRight, ExternalLink, Search, Settings, X,
 } from 'lucide-react';
+=======
+import { useEffect, useState } from 'react';
+import { Check, AlertCircle, Megaphone, Calendar } from 'lucide-react';
+>>>>>>> origin/main
 import { api } from '../api';
 import { KpiDetailModal, KpiPill } from '../components/KpiDetailModal';
 import { useAuth } from '../context/AuthContext';

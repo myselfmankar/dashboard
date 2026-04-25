@@ -28,7 +28,7 @@ export function TeachersView() {
 
   return (
     <div className="flex gap-6 h-full p-4 lg:p-0">
-      {/* LEFT/MAIN LAYER */}
+      {/* MAIN COLUMN */}
       <div className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 pb-6">
         
         {/* Welcome Banner */}
@@ -104,67 +104,6 @@ export function TeachersView() {
 
       </div>
 
-      {/* RIGHT PANEL - CALENDAR/TASKS */}
-      <div className="hidden xl:flex flex-col w-[280px] shrink-0 gap-6 border-l border-s200 pl-6 h-full overflow-y-auto pb-6">
-        
-        {/* Calendar */}
-        <div>
-          <h3 className="font-serif text-lg font-bold text-s800 tracking-tight mb-3">Calendar</h3>
-          <div className="bg-white border border-s200 rounded-xl p-4">
-             <div className="flex justify-between items-center mb-4 text-xs font-bold text-s500">
-               <button className="hover:text-accent">‹</button>
-               <span>March 2026</span>
-               <button className="hover:text-accent">›</button>
-             </div>
-             <div className="grid grid-cols-7 gap-y-2 text-center text-[10px]">
-               {['Mo','Tu','We','Th','Fr','Sa','Su'].map(d=><div key={d} className="font-mono text-s400">{d}</div>)}
-               {Array.from({length: 6}).map((_,i)=><div key={`p-${i}`}/>)}
-               {Array.from({length: 31}).map((_,i)=>(
-                 <div key={i} className={`w-6 h-6 mx-auto flex flex-col justify-center items-center rounded-full font-bold
-                    ${i+1===14 ? 'bg-accent text-white shadow-md' : [8,15,22].includes(i+1) ? 'text-accent bg-orange-50' : 'text-s600'}
-                 `}>{i+1}</div>
-               ))}
-             </div>
-          </div>
-        </div>
-
-        {/* Lessons */}
-        <div>
-           <div className="flex justify-between items-center mb-3">
-             <h3 className="font-serif text-lg font-bold text-s800 tracking-tight">Lessons</h3>
-             <span className="text-[10px] text-accent font-bold cursor-pointer">View all</span>
-           </div>
-           
-           <div className="flex flex-col gap-3">
-             <div className="bg-white border border-s200 rounded-xl p-3 flex gap-3 shadow-sm">
-               <div className="w-1 bg-accent rounded-full shrink-0" />
-               <div className="flex-1">
-                 <div className="text-xs font-bold text-s800">Common English</div>
-                 <div className="text-[10px] text-s400 mb-2">Thu 08 • 9:00 PM</div>
-                 <div className="flex -space-x-2">
-                   {['bg-purple-500','bg-blue-500','bg-green-500'].map((c,i)=>(
-                     <div key={i} className={`w-5 h-5 rounded-full border border-white ${c} text-[8px] text-white flex items-center justify-center`}>AM</div>
-                   ))}
-                   <div className="w-5 h-5 rounded-full border border-white bg-s100 text-s500 text-[8px] flex items-center justify-center font-bold">+4</div>
-                 </div>
-               </div>
-             </div>
-
-             <div className="bg-white border border-s200 rounded-xl p-3 flex gap-3 shadow-sm">
-               <div className="w-1 bg-amber-500 rounded-full shrink-0" />
-               <div className="flex-1">
-                 <div className="text-xs font-bold text-s800">Speaking Club</div>
-                 <div className="text-[10px] text-s400 mb-2">Thu 08 • 11:00 PM</div>
-                 <div className="flex -space-x-2">
-                   {['bg-red-500','bg-cyan-500'].map((c,i)=>(
-                     <div key={i} className={`w-5 h-5 rounded-full border border-white ${c} text-[8px] text-white flex items-center justify-center`}>LT</div>
-                   ))}
-                 </div>
-               </div>
-             </div>
-           </div>
-        </div>
-      </div>
     </div>
   );
 }

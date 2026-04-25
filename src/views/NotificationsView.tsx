@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check, AlertTriangle, AlertCircle, Info, Megaphone, Calendar,
-  Filter, BellOff, ChevronRight, ExternalLink,
+  Filter, BellOff, ChevronRight, ExternalLink, Search, Settings, X,
 } from 'lucide-react';
 import { api } from '../api';
 import { KpiDetailModal, KpiPill } from '../components/KpiDetailModal';
 import { useAuth } from '../context/AuthContext';
+import { relDateShort, relDateLong } from '../lib/schoolEvents';
 import type { Alert } from '../types';
 
 /**
@@ -32,6 +33,27 @@ export function NotificationsView() {
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<SeverityFilter>('all');
   const [activeAlert, setActiveAlert] = useState<Alert | null>(null);
+  const [search, setSearch] = useState('');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [prefs, setPrefs] = useState<NotifPrefs>(() => loadPrefs());
+  const [activeNotice, setActiveNotice] = useState<Notice | null>(null);
+  const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
+
+  // Persist preferences locally — no schema yet.
+  useEffect(() => { savePrefs(prefs); }, [prefs]);
+
+  // Close settings popover on outside click.
+  const settingsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setSettingsOpen(false);
+      }
+    };
+    window.addEventListener('mousedown', onDoc);
+    return () => window.removeEventListener('mousedown', onDoc);
+  }, [settingsOpen]);
 
   useEffect(() => {
     api.getAlerts().then(setAlerts).catch(() => setAlerts([]));
@@ -50,10 +72,21 @@ export function NotificationsView() {
   }, [alerts, readIds]);
 
   const visible = useMemo(() => {
-    const list = alerts ?? [];
-    if (filter === 'all') return list;
-    return list.filter((a) => a.severity === filter);
-  }, [alerts, filter]);
+    let list = alerts ?? [];
+    if (filter !== 'all') list = list.filter((a) => a.severity === filter);
+    // Hide severities turned off in settings
+    list = list.filter((a) => prefs.severities[a.severity]);
+    // Free-text search
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter((a) =>
+        a.studentName.toLowerCase().includes(q) ||
+        a.issue.toLowerCase().includes(q) ||
+        a.context.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [alerts, filter, search, prefs]);
 
   const markAllRead = () => {
     if (!alerts) return;
@@ -84,13 +117,50 @@ export function NotificationsView() {
               : `${counts.unread} unread • ${counts.all} total`}
           </p>
         </div>
-        <button
-          onClick={markAllRead}
-          disabled={!alerts || counts.unread === 0}
-          className="flex items-center gap-2 bg-s100 text-s700 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-s200 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <Check size={16} /> Mark All Read
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Search box */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-s400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search alerts…"
+              className="w-48 md:w-64 py-2 pr-8 pl-8 bg-white border border-s200 rounded-xl text-xs outline-none focus:border-accent focus:ring-2 focus:ring-orange-100 transition-all"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-s400 hover:text-s700"
+                aria-label="Clear search"
+              ><X size={12} /></button>
+            )}
+          </div>
+
+          {/* Settings popover */}
+          <div className="relative" ref={settingsRef}>
+            <button
+              onClick={() => setSettingsOpen((v) => !v)}
+              aria-label="Notification settings"
+              className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-colors shadow-sm ${
+                settingsOpen ? 'bg-accent border-accent text-white' : 'bg-white border-s200 text-s700 hover:bg-s50'
+              }`}
+            >
+              <Settings size={14} />
+            </button>
+            {settingsOpen && (
+              <NotifSettingsPopover prefs={prefs} onChange={setPrefs} onClose={() => setSettingsOpen(false)} />
+            )}
+          </div>
+
+          <button
+            onClick={markAllRead}
+            disabled={!alerts || counts.unread === 0}
+            className="flex items-center gap-2 bg-s100 text-s700 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-s200 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Check size={16} /> Mark All Read
+          </button>
+        </div>
       </div>
 
       {/* Severity filter chips */}
@@ -139,22 +209,29 @@ export function NotificationsView() {
           ─────────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white border border-s200 rounded-2xl p-6 shadow-sm">
-          <SectionHeader icon={<Megaphone size={20} className="text-accent" />} title="Notice Board" subtitle="School-wide announcements" />
+          <SectionHeader icon={<Megaphone size={20} className="text-accent" />} title="Notice Board" subtitle="School-wide announcements • Click to read" />
           <div className="flex flex-col gap-4">
             {NOTICES.map((n, i) => (
-              <div key={i} className="flex flex-col border-b border-s100 border-dashed pb-3 last:border-0 last:pb-0">
-                <h4 className="text-xs font-bold text-s800 mb-1">{n.title}</h4>
+              <button
+                key={i}
+                onClick={() => setActiveNotice(n)}
+                className="text-left flex flex-col border-b border-s100 border-dashed pb-3 last:border-0 last:pb-0 hover:bg-s50 -mx-2 px-2 py-1 rounded-lg transition-colors group"
+              >
+                <h4 className="text-xs font-bold text-s800 mb-1 group-hover:text-accent transition-colors flex items-center gap-1.5">
+                  {n.title}
+                  <ChevronRight size={12} className="text-s300 group-hover:text-accent transition-all group-hover:translate-x-0.5" />
+                </h4>
                 <div className="flex justify-between items-center text-[10px] text-s500 uppercase tracking-widest font-mono">
                   <span>{n.date}</span>
                   <span>By {n.author}</span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
 
         <div className="bg-white border border-s200 rounded-2xl p-6 shadow-sm overflow-x-auto">
-          <SectionHeader icon={<Calendar size={20} className="text-accent" />} title="Upcoming Events" subtitle="Next 7 days" />
+          <SectionHeader icon={<Calendar size={20} className="text-accent" />} title="Upcoming Events" subtitle="Next 7 days • Click for details" />
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-s200">
@@ -165,7 +242,11 @@ export function NotificationsView() {
             </thead>
             <tbody className="divide-y divide-s100 text-xs">
               {EVENTS.map((e, i) => (
-                <tr key={i} className="hover:bg-s50 transition-colors">
+                <tr
+                  key={i}
+                  onClick={() => setActiveEvent(e)}
+                  className="hover:bg-s50 transition-colors cursor-pointer"
+                >
                   <td className="py-2.5 pl-2 font-bold text-s800">{e.event}</td>
                   <td className="py-2.5 text-s600 font-mono text-[10px] uppercase">{e.date}</td>
                   <td className="py-2.5">
@@ -191,6 +272,8 @@ export function NotificationsView() {
           setReadIds((prev) => new Set(prev).add(id));
         }}
       />
+      <NoticeDetailModal notice={activeNotice} onClose={() => setActiveNotice(null)} />
+      <EventDetailModal  event={activeEvent}   onClose={() => setActiveEvent(null)} />
     </div>
   );
 }
@@ -398,14 +481,193 @@ function AlertDetailModal({
 
 // ── Sample notice / event data (schema gap) ────────────────────────────────
 
-const NOTICES = [
-  { title: 'New Transport Routes',          date: 'Apr 24, 2026', author: 'Transport Dept' },
-  { title: 'Annual Day Practice Schedule',  date: 'Apr 22, 2026', author: 'Cultural Cmte' },
-  { title: 'Revised Library Timings',       date: 'Apr 20, 2026', author: 'Librarian' },
+interface Notice { title: string; date: string; author: string; body: string; }
+interface EventItem { event: string; date: string; type: 'Academic' | 'Admin' | 'Holiday'; venue: string; time: string; details: string; }
+
+const NOTICES: Notice[] = [
+  { title: 'New Transport Routes',         date: relDateLong(-2), author: 'Transport Dept', body: 'Three new bus routes will service the eastern suburbs starting next week. Route maps and pickup timings will be shared with parents via SMS. Existing routes remain unchanged.' },
+  { title: 'Annual Day Practice Schedule', date: relDateLong(-4), author: 'Cultural Cmte',  body: 'Annual Day rehearsals begin shortly. Participating students will be released from regular classes at 2:30 PM on rehearsal days. Class teachers will share individual schedules.' },
+  { title: 'Revised Library Timings',      date: relDateLong(-6), author: 'Librarian',      body: 'Library will now remain open until 7:00 PM on weekdays to support exam preparation. Saturday hours unchanged (9 AM – 1 PM). Quiet study zones available on the second floor.' },
 ];
 
-const EVENTS = [
-  { event: 'Inter-school Science Fair', date: 'May 02', type: 'Academic' },
-  { event: 'Parent-Teacher Meeting',    date: 'May 05', type: 'Admin' },
-  { event: 'Term Break Begins',         date: 'May 18', type: 'Holiday' },
+const EVENTS: EventItem[] = [
+  { event: 'Inter-school Science Fair', date: relDateShort(8),  type: 'Academic', venue: 'Main Auditorium',     time: '10:00 AM – 4:00 PM', details: 'Hosting 12 partner schools. Grade 9–12 project teams will present in three rounds. Judges from IIT Madras and the State Science Council.' },
+  { event: 'Parent-Teacher Meeting',    date: relDateShort(11), type: 'Admin',    venue: 'Respective Classrooms', time: '9:00 AM – 1:00 PM',  details: 'Term 2 progress review. Parents are requested to confirm slots via the portal in advance. AI-generated student summaries will be shared at the meeting.' },
+  { event: 'Term Break Begins',         date: relDateShort(24), type: 'Holiday',  venue: '—',                    time: 'All Day',            details: 'School reopens after a two-week break. Holiday assignments and reading lists will be uploaded to the portal beforehand.' },
 ];
+
+// ── Notification preferences (settings popover) ────────────────────────────
+
+interface NotifPrefs {
+  severities: Record<Alert['severity'], boolean>;
+  sound: boolean;
+  desktop: boolean;
+  digest: 'instant' | 'hourly' | 'daily';
+}
+
+const PREFS_KEY = 'notivo.notifPrefs.v1';
+const DEFAULT_PREFS: NotifPrefs = {
+  severities: { critical: true, warning: true, info: true },
+  sound: true,
+  desktop: false,
+  digest: 'instant',
+};
+
+function loadPrefs(): NotifPrefs {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    if (!raw) return DEFAULT_PREFS;
+    return { ...DEFAULT_PREFS, ...JSON.parse(raw) };
+  } catch { return DEFAULT_PREFS; }
+}
+
+function savePrefs(p: NotifPrefs) {
+  try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch { /* ignore */ }
+}
+
+function NotifSettingsPopover({
+  prefs, onChange, onClose,
+}: {
+  prefs: NotifPrefs;
+  onChange: (p: NotifPrefs) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-label="Notification settings"
+      className="absolute right-0 top-11 w-72 bg-white border border-s200 rounded-2xl shadow-xl z-40 p-4 animate-in slide-in-from-top-2 duration-150"
+    >
+      <div className="flex items-center justify-between mb-3 pb-3 border-b border-s100">
+        <div>
+          <h4 className="font-serif text-sm font-bold text-s800 leading-none">Notification Settings</h4>
+          <p className="text-[10px] text-s400 mt-1 font-mono uppercase tracking-widest">Saved locally</p>
+        </div>
+        <button onClick={onClose} className="text-s400 hover:text-s700"><X size={14} /></button>
+      </div>
+
+      <div className="text-[10px] font-mono uppercase tracking-widest text-s400 mb-2">Show severities</div>
+      <div className="flex flex-col gap-1.5 mb-4">
+        {(['critical', 'warning', 'info'] as const).map((sev) => (
+          <label key={sev} className="flex items-center gap-2 cursor-pointer text-xs text-s700 hover:bg-s50 px-2 py-1 rounded">
+            <input
+              type="checkbox"
+              checked={prefs.severities[sev]}
+              onChange={(e) => onChange({ ...prefs, severities: { ...prefs.severities, [sev]: e.target.checked } })}
+              className="accent-accent"
+            />
+            <span className="capitalize font-semibold">{sev}</span>
+          </label>
+        ))}
+      </div>
+
+      <div className="text-[10px] font-mono uppercase tracking-widest text-s400 mb-2">Delivery</div>
+      <div className="flex flex-col gap-1.5 mb-4">
+        <label className="flex items-center gap-2 cursor-pointer text-xs text-s700 hover:bg-s50 px-2 py-1 rounded">
+          <input type="checkbox" checked={prefs.sound}   onChange={(e) => onChange({ ...prefs, sound:   e.target.checked })} className="accent-accent" />
+          <span>Sound on new alert</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer text-xs text-s700 hover:bg-s50 px-2 py-1 rounded">
+          <input type="checkbox" checked={prefs.desktop} onChange={(e) => onChange({ ...prefs, desktop: e.target.checked })} className="accent-accent" />
+          <span>Desktop notifications</span>
+        </label>
+      </div>
+
+      <div className="text-[10px] font-mono uppercase tracking-widest text-s400 mb-2">Digest frequency</div>
+      <div className="grid grid-cols-3 gap-1">
+        {(['instant', 'hourly', 'daily'] as const).map((opt) => (
+          <button
+            key={opt}
+            onClick={() => onChange({ ...prefs, digest: opt })}
+            className={`text-[10px] font-bold uppercase tracking-widest py-1.5 rounded-lg border transition-colors ${
+              prefs.digest === opt
+                ? 'bg-accent text-white border-accent'
+                : 'bg-white text-s600 border-s200 hover:border-s400'
+            }`}
+          >{opt}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Notice / Event detail popups (KpiDetailModal-style) ────────────────────
+
+function NoticeDetailModal({ notice, onClose }: { notice: Notice | null; onClose: () => void }) {
+  if (!notice) return null;
+  return (
+    <KpiDetailModal
+      open={!!notice}
+      title={notice.title}
+      subtitle={`${notice.date} \u2022 ${notice.author}`}
+      onClose={onClose}
+    >
+      <div style={{
+        padding: 18, borderRadius: 12,
+        background: '#fffaf5', border: '1px solid #FFD4A8',
+      }}>
+        <div style={{
+          fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+          color: '#F47B20', fontFamily: '"DM Mono", monospace', marginBottom: 8,
+        }}>Notice Board</div>
+        <p style={{
+          margin: 0, fontFamily: '"Lora", serif',
+          fontSize: 14, color: '#1e293b', lineHeight: 1.6,
+        }}>{notice.body}</p>
+      </div>
+    </KpiDetailModal>
+  );
+}
+
+function EventDetailModal({ event, onClose }: { event: EventItem | null; onClose: () => void }) {
+  if (!event) return null;
+  const typeColor =
+    event.type === 'Academic' ? { bg: '#dbeafe', fg: '#1e40af' } :
+    event.type === 'Admin'    ? { bg: '#ede9fe', fg: '#6b21a8' } :
+                                { bg: '#dcfce7', fg: '#15803d' };
+  return (
+    <KpiDetailModal
+      open={!!event}
+      title={event.event}
+      subtitle={`${event.date} \u2022 ${event.time}`}
+      onClose={onClose}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <KpiPill bg={typeColor.bg} fg={typeColor.fg}>{event.type.toUpperCase()}</KpiPill>
+          <span style={{
+            fontSize: 11, color: '#94a3b8',
+            fontFamily: '"Roboto Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>Venue: {event.venue}</span>
+        </div>
+        <div style={{
+          padding: 16, borderRadius: 12,
+          background: '#f8fafc', border: '1px solid #e2e8f0',
+        }}>
+          <p style={{
+            margin: 0, fontFamily: '"Lora", serif',
+            fontSize: 14, color: '#1e293b', lineHeight: 1.6,
+          }}>{event.details}</p>
+        </div>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '9px 16px', borderRadius: 10, border: '1px solid #e2e8f0',
+              background: '#fff', color: '#475569', fontWeight: 600, fontSize: 12,
+              cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+            }}
+          >Close</button>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '9px 16px', borderRadius: 10, border: 'none',
+              background: '#F47B20', color: '#fff', fontWeight: 700, fontSize: 12,
+              cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+            }}
+          >Add to Calendar</button>
+        </div>
+      </div>
+    </KpiDetailModal>
+  );
+}

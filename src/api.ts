@@ -672,6 +672,91 @@ export const api = {
     }),
 
   /**
+   * Per-class aggregate view for the Courses page.
+   *
+   * For every class in this institute, computes:
+   *   - enrollments    (studentIds.length)
+   *   - atRiskCount    (distinct students flagged at_risk in evo_insights)
+   *   - avgScore       (mean comprehensionScore across the class's insights;
+   *                     falls back to severity-derived score)
+   *   - topWeakTopic   (most-flagged HIGH/MEDIUM topic for the class)
+   *   - teacherName / initials
+   *
+   * Returns a stable shape for CoursesView. Cached for one day.
+   */
+  getCoursesOverview: () =>
+    cache.getOrFetch('coursesOverview', TTL.day, async () => {
+      try {
+        const [classes, insights] = await Promise.all([
+          fetchClasses(),
+          fetchEvoInsights(),
+        ]);
+        const teacherUids = Array.from(new Set(classes.map((c) => c.teacherUid).filter(Boolean)));
+        const users = await fetchUsersByUid(teacherUids);
+
+        // Group insights by classId for fast per-class aggregation.
+        const byClass = new Map<string, EvoInsightDoc[]>();
+        for (const ins of insights) {
+          const arr = byClass.get(ins.classId) ?? [];
+          arr.push(ins);
+          byClass.set(ins.classId, arr);
+        }
+
+        return classes.map((c) => {
+          const classInsights = byClass.get(c.id) ?? [];
+
+          // Avg comprehensionScore (or fallback)
+          let scoreSum = 0; let scoreN = 0;
+          for (const i of classInsights) {
+            const s = typeof i.comprehensionScore === 'number'
+              ? i.comprehensionScore
+              : 100 - Math.min(100, (i.mistakeCount ?? 0) * 8);
+            scoreSum += s; scoreN++;
+          }
+          const avgScore = scoreN > 0 ? Math.round(scoreSum / scoreN) : 0;
+
+          // Distinct at-risk students within the class
+          const atRiskUids = new Set(
+            classInsights.filter((i) => i.flag === 'at_risk').map((i) => i.studentUid),
+          );
+
+          // Top weak topic for this class
+          const topicHits = new Map<string, number>();
+          for (const i of classInsights) {
+            for (const raw of i.errorTags ?? []) {
+              const { topic, severity } = parseErrorTag(raw);
+              if (!topic || severity === 'LOW' || severity === 'UNKNOWN') continue;
+              topicHits.set(topic, (topicHits.get(topic) ?? 0) + (severity === 'HIGH' ? 2 : 1));
+            }
+          }
+          const topWeakTopic = Array.from(topicHits.entries())
+            .sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
+
+          const teacher = users.get(c.teacherUid);
+          const teacherName = resolveDisplayName(teacher, c.teacherUid || '—');
+          const initials = teacherName
+            .split(/\s+/).map((s) => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '–';
+
+          return {
+            classId: c.id,
+            className: c.className ?? '—',
+            subject: c.subject ?? '—',
+            teacherName,
+            teacherInitials: initials,
+            enrollments: c.studentIds?.length ?? 0,
+            atRiskCount: atRiskUids.size,
+            avgScore,
+            topWeakTopic,
+            sessionsLogged: classInsights.length,
+          };
+        });
+      } catch (err) {
+        console.error('getCoursesOverview failed', err);
+        return [];
+      }
+    }),
+
+  /**
    * Detailed view for a single student — powers the Student Detail Modal.
    *
    * Combines two data sources:

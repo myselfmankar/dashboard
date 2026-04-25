@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Calendar, FileText, CheckCircle, AlertTriangle } from 'lucide-react';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { StudentInlinePreview } from '../components/StudentInlinePreview';
 import { StudentDetailModal } from '../components/StudentDetailModal';
 import { ParentKpiModals, type ParentKpi } from '../components/ParentKpiModals';
+import { UpcomingEventsTimeline } from '../components/UpcomingEventsTimeline';
 import { usePrewarmAiCache } from '../lib/usePrewarmAiCache';
+import { resolveSchoolEvents } from '../lib/schoolEvents';
 import type { HeatmapStudent } from '../types';
 
 /**
@@ -34,6 +36,12 @@ export function ParentsView() {
   // Pre-warm AI for the children so "View more" opens instantly.
   usePrewarmAiCache(children ?? []);
 
+  // Live event count for the KPI strip — auto-updates as days pass.
+  const upcomingCount = useMemo(
+    () => resolveSchoolEvents().filter((e) => !e.isPast).length,
+    [],
+  );
+
   return (
     <div className="flex flex-col gap-6 animate-in slide-in-from-bottom-4 duration-500 pb-10">
       <div>
@@ -43,7 +51,7 @@ export function ParentsView() {
 
       {/* KPI Cards Row (sample) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <SampleKpi icon={<Calendar size={24} />}    value="06" label="Upcoming Events"  tone="orange" onClick={() => setOpenKpi('events')} />
+        <SampleKpi icon={<Calendar size={24} />}    value={String(upcomingCount).padStart(2, '0')} label="Upcoming Events"  tone="orange" onClick={() => setOpenKpi('events')} />
         <SampleKpi icon={<FileText size={24} />}    value="15" label="Upcoming Exams"   tone="green"  onClick={() => setOpenKpi('exams')} />
         <SampleKpi icon={<CheckCircle size={24} />} value="08" label="Result Published" tone="teal"   onClick={() => setOpenKpi('results')} />
       </div>
@@ -67,17 +75,8 @@ export function ParentsView() {
           ))}
         </div>
 
-        {/* School Events (sample) */}
-        <div className="glass-card p-5">
-          <h3 className="font-serif text-lg font-bold text-s800 tracking-tight mb-4 border-l-4 border-accent pl-3">School Events</h3>
-          <div className="flex flex-col gap-3 max-h-[640px] overflow-y-auto pr-2">
-            <EventItem date="20" month="Mar" title="Parent-Teacher Meeting" time="9:00 AM – 1:00 PM • School Hall" theme="orange" badge="Today+4" />
-            <EventItem date="28" month="Mar" title="Annual Sports Day" time="8:00 AM – 5:00 PM • Sports Ground" theme="green" badge="12 days" />
-            <EventItem date="05" month="Apr" title="Science Exhibition" time="10:00 AM – 4:00 PM • Lab Block" theme="blue" badge="20 days" />
-            <EventItem date="14" month="Apr" title="Cultural Fest" time="All Day • Auditorium" theme="purple" badge="29 days" />
-            <EventItem date="22" month="Apr" title="Earth Day Plantation" time="7:00 AM – 9:00 PM • Garden" theme="orange-dark" badge="37 days" />
-          </div>
-        </div>
+        {/* Auto-updating Upcoming Events timeline */}
+        <UpcomingEventsTimeline onSelectEvent={() => setOpenKpi('events')} />
       </div>
 
       <StudentDetailModal uid={activeUid} onClose={() => setActiveUid(null)} />
@@ -135,38 +134,6 @@ function SampleKpi({
         <div className="text-2xl font-headline">{value}</div>
         <div className="text-xs font-bold text-s700 uppercase tracking-wide">{label}</div>
       </div>
-    </div>
-  );
-}
-
-// ── School events (sample) ─────────────────────────────────────────────────
-
-function EventItem({
-  date, month, title, time, theme, badge,
-}: {
-  date: string; month: string; title: string; time: string;
-  theme: 'orange' | 'green' | 'blue' | 'purple' | 'orange-dark';
-  badge: string;
-}) {
-  const themes = {
-    'orange':      { bg: 'bg-orange-50', border: 'border-orange-500', text: 'text-orange-500', badgeBg: 'bg-white',         badgeText: 'text-orange-500', badgeBorder: 'border-orange-200' },
-    'green':       { bg: 'bg-green-50',  border: 'border-green-500',  text: 'text-green-500',  badgeBg: 'bg-green-100',     badgeText: 'text-green-700',  badgeBorder: 'border-transparent' },
-    'blue':        { bg: 'bg-blue-50',   border: 'border-blue-500',   text: 'text-blue-500',   badgeBg: 'bg-blue-100',      badgeText: 'text-blue-700',   badgeBorder: 'border-transparent' },
-    'purple':      { bg: 'bg-purple-50', border: 'border-purple-500', text: 'text-purple-500', badgeBg: 'bg-purple-100',    badgeText: 'text-purple-700', badgeBorder: 'border-transparent' },
-    'orange-dark': { bg: 'bg-orange-50', border: 'border-orange-600', text: 'text-orange-600', badgeBg: 'bg-orange-100',    badgeText: 'text-orange-700', badgeBorder: 'border-transparent' },
-  } as const;
-  const t = themes[theme];
-  return (
-    <div className={`flex items-center gap-4 p-3 rounded-xl border-l-4 ${t.bg} ${t.border}`}>
-      <div className="text-center min-w-[40px]">
-        <div className={`text-xl font-bold font-headline leading-none ${t.text}`}>{date}</div>
-        <div className="text-[9px] uppercase tracking-wider text-s400">{month}</div>
-      </div>
-      <div className="flex-1">
-        <h4 className="text-xs font-bold text-s900">{title}</h4>
-        <p className="text-[10px] text-s500 mt-0.5">{time}</p>
-      </div>
-      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${t.badgeBg} ${t.badgeText} ${t.badgeBorder}`}>{badge}</span>
     </div>
   );
 }

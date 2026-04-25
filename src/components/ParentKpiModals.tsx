@@ -1,4 +1,7 @@
 import { KpiDetailModal, KpiTable, KpiRow, KpiCell, KpiPill } from './KpiDetailModal';
+import {
+  resolveSchoolEvents, formatShortDate, relativeDayLabel, relDateShort, EVENT_TYPE_THEME,
+} from '../lib/schoolEvents';
 
 /**
  * The 3 KPI drill-down modals shown when a parent clicks a top KPI card on
@@ -20,24 +23,28 @@ interface Props {
 }
 
 export function ParentKpiModals({ active, onClose }: Props) {
+  const upcoming = resolveSchoolEvents().filter((e) => !e.isPast);
   return (
     <>
       <KpiDetailModal
         open={active === 'events'}
         title="Upcoming School Events"
-        subtitle={`${UPCOMING_EVENTS.length} events scheduled this term`}
+        subtitle={`${upcoming.length} events scheduled`}
         onClose={onClose}
       >
-        <KpiTable headers={['Date', 'Event', 'Venue', 'Time', 'Audience']}>
-          {UPCOMING_EVENTS.map((e, i) => (
-            <KpiRow key={i}>
-              <KpiCell><KpiPill bg="#fff7ed" fg="#c2410c">{e.date}</KpiPill></KpiCell>
-              <KpiCell color="#1e293b" bold>{e.title}</KpiCell>
-              <KpiCell color="#64748b">{e.venue}</KpiCell>
-              <KpiCell color="#64748b" mono>{e.time}</KpiCell>
-              <KpiCell><KpiPill bg="#f1f5f9" fg="#334155">{e.audience}</KpiPill></KpiCell>
-            </KpiRow>
-          ))}
+        <KpiTable headers={['Date', 'Event', 'Type', 'Venue', 'When']}>
+          {upcoming.map((e, i) => {
+            const theme = EVENT_TYPE_THEME[e.type];
+            return (
+              <KpiRow key={i}>
+                <KpiCell><KpiPill bg="#fff7ed" fg="#c2410c">{formatShortDate(e.date)}</KpiPill></KpiCell>
+                <KpiCell color="#1e293b" bold>{e.title}</KpiCell>
+                <KpiCell><KpiPill bg={`${theme.dot}1f`} fg={theme.dot}>{theme.label}</KpiPill></KpiCell>
+                <KpiCell color="#64748b">{e.venue}</KpiCell>
+                <KpiCell color="#64748b" mono>{relativeDayLabel(e.date)}</KpiCell>
+              </KpiRow>
+            );
+          })}
         </KpiTable>
       </KpiDetailModal>
 
@@ -93,33 +100,24 @@ function gradeColor(g: string): string {
 
 // ── Sample data (schema gaps) ──────────────────────────────────────────────
 
-const UPCOMING_EVENTS = [
-  { date: '20 Mar', title: 'Parent-Teacher Meeting', venue: 'School Hall',     time: '9:00 AM – 1:00 PM',  audience: 'All Parents' },
-  { date: '28 Mar', title: 'Annual Sports Day',      venue: 'Sports Ground',   time: '8:00 AM – 5:00 PM',  audience: 'School-wide' },
-  { date: '05 Apr', title: 'Science Exhibition',     venue: 'Lab Block',       time: '10:00 AM – 4:00 PM', audience: 'Grade 8–12' },
-  { date: '14 Apr', title: 'Cultural Fest',          venue: 'Auditorium',      time: 'All Day',            audience: 'School-wide' },
-  { date: '22 Apr', title: 'Earth Day Plantation',   venue: 'School Garden',   time: '7:00 AM – 9:00 AM',  audience: 'Volunteers' },
-  { date: '02 May', title: 'Inter-School Debate',    venue: 'Auditorium',      time: '11:00 AM – 3:00 PM', audience: 'Grade 11–12' },
-];
-
 const UPCOMING_EXAMS = [
-  { date: '04 May', subject: 'Mathematics', className: 'Grade 10-A', duration: '3 hrs',  status: 'Scheduled' },
-  { date: '06 May', subject: 'Physics',     className: 'Grade 10-A', duration: '3 hrs',  status: 'Scheduled' },
-  { date: '08 May', subject: 'Chemistry',   className: 'Grade 10-A', duration: '3 hrs',  status: 'Scheduled' },
-  { date: '10 May', subject: 'Biology',     className: 'Grade 10-A', duration: '3 hrs',  status: 'Scheduled' },
-  { date: '12 May', subject: 'English',     className: 'Grade 10-A', duration: '3 hrs',  status: 'Scheduled' },
-  { date: '14 May', subject: 'Hindi',       className: 'Grade 10-A', duration: '3 hrs',  status: 'Scheduled' },
-  { date: '16 May', subject: 'Soc. Sci.',   className: 'Grade 10-A', duration: '3 hrs',  status: 'Tentative' },
-  { date: '18 May', subject: 'Comp. Sci.',  className: 'Grade 10-A', duration: '2 hrs',  status: 'Tentative' },
+  { date: relDateShort(14), subject: 'Mathematics', className: 'Grade 10-A', duration: '3 hrs',  status: 'Scheduled' },
+  { date: relDateShort(16), subject: 'Physics',     className: 'Grade 10-A', duration: '3 hrs',  status: 'Scheduled' },
+  { date: relDateShort(18), subject: 'Chemistry',   className: 'Grade 10-A', duration: '3 hrs',  status: 'Scheduled' },
+  { date: relDateShort(20), subject: 'Biology',     className: 'Grade 10-A', duration: '3 hrs',  status: 'Scheduled' },
+  { date: relDateShort(22), subject: 'English',     className: 'Grade 10-A', duration: '3 hrs',  status: 'Scheduled' },
+  { date: relDateShort(24), subject: 'Hindi',       className: 'Grade 10-A', duration: '3 hrs',  status: 'Scheduled' },
+  { date: relDateShort(26), subject: 'Soc. Sci.',   className: 'Grade 10-A', duration: '3 hrs',  status: 'Tentative' },
+  { date: relDateShort(28), subject: 'Comp. Sci.',  className: 'Grade 10-A', duration: '2 hrs',  status: 'Tentative' },
 ];
 
 const PUBLISHED_RESULTS = [
-  { date: '18 Apr', subject: 'Mathematics', test: 'Unit Test 4',     score: 88, grade: 'A'  },
-  { date: '15 Apr', subject: 'Physics',     test: 'Practical Lab',   score: 92, grade: 'A+' },
-  { date: '12 Apr', subject: 'Chemistry',   test: 'Unit Test 4',     score: 76, grade: 'B'  },
-  { date: '08 Apr', subject: 'Biology',     test: 'Surprise Quiz',   score: 81, grade: 'A'  },
-  { date: '05 Apr', subject: 'English',     test: 'Essay Writing',   score: 85, grade: 'A'  },
-  { date: '02 Apr', subject: 'Mathematics', test: 'Mid-term Mock',   score: 68, grade: 'C'  },
-  { date: '28 Mar', subject: 'Comp. Sci.',  test: 'Project Eval',    score: 94, grade: 'A+' },
-  { date: '25 Mar', subject: 'Hindi',       test: 'Unit Test 3',     score: 72, grade: 'B'  },
+  { date: relDateShort(-2),  subject: 'Mathematics', test: 'Unit Test 4',     score: 88, grade: 'A'  },
+  { date: relDateShort(-5),  subject: 'Physics',     test: 'Practical Lab',   score: 92, grade: 'A+' },
+  { date: relDateShort(-8),  subject: 'Chemistry',   test: 'Unit Test 4',     score: 76, grade: 'B'  },
+  { date: relDateShort(-12), subject: 'Biology',     test: 'Surprise Quiz',   score: 81, grade: 'A'  },
+  { date: relDateShort(-15), subject: 'English',     test: 'Essay Writing',   score: 85, grade: 'A'  },
+  { date: relDateShort(-18), subject: 'Mathematics', test: 'Mid-term Mock',   score: 68, grade: 'C'  },
+  { date: relDateShort(-22), subject: 'Comp. Sci.',  test: 'Project Eval',    score: 94, grade: 'A+' },
+  { date: relDateShort(-26), subject: 'Hindi',       test: 'Unit Test 3',     score: 72, grade: 'B'  },
 ];

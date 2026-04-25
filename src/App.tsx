@@ -4,7 +4,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { 
   UserCheck, BookOpen, Clock, 
-  Settings, Bell, Search, Menu,
+  Settings, Bell, Menu,
   LayoutDashboard, School, Users, GraduationCap, ShieldCheck
 } from 'lucide-react';
 
@@ -141,13 +141,8 @@ function PageLayout({ children, onLogout, role }: { children: React.ReactNode, o
             <button className="w-[34px] h-[34px] rounded-lg bg-s50 border border-s200 flex items-center justify-center md:hidden" onClick={() => setIsSidebarOpen(true)}>
               <Menu size={18} />
             </button>
-            <div className="relative flex-1 max-w-[300px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-s400" />
-              <input type="text" placeholder="Search school records..." className="w-full py-2 pr-3 pl-8 bg-s50 border border-s200 rounded-lg text-xs outline-none focus:border-accent" />
-            </div>
             <div className="ml-auto flex items-center gap-4">
-               <div className="text-[10px] font-mono text-s400 uppercase tracking-widest hidden lg:block">Notivo &copy; 2026</div>
-               <div className="w-8 h-8 rounded-full bg-s100 border border-s200 flex items-center justify-center text-s700"><Settings size={14}/></div>
+               <div className="text-[10px] font-mono text-s400 uppercase tracking-widest hidden lg:block">Notivo &copy; {new Date().getFullYear()}</div>
             </div>
           </header>
 

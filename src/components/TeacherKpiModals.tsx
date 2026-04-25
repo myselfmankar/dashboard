@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { KpiDetailModal, KpiTable, KpiRow, KpiCell, KpiPill, KpiBar } from './KpiDetailModal';
 import { api } from '../api';
+import { relDateShort } from '../lib/schoolEvents';
 import type { HeatmapStudent } from '../types';
 
 /**
@@ -154,9 +155,9 @@ const ATTENDANCE_SAMPLE = [
 ];
 
 const PENDING_REVIEWS = [
-  { icon: '📝', title: 'Grammar Test — Grade 10-A',     meta: 'Submitted Mar 12 · 32 papers pending', bg: '#FFF5EE' },
-  { icon: '📚', title: 'Essay Assignment — Grade 9-B',  meta: 'Submitted Mar 13 · 28 papers pending', bg: '#f5f3ff' },
-  { icon: '🎙️', title: 'Speaking Evaluation — Club',    meta: 'Recorded Mar 14 · 18 audio clips',     bg: '#f0fdf4' },
+  { icon: '📝', title: 'Grammar Test — Grade 10-A',     meta: `Submitted ${relDateShort(-3)} · 32 papers pending`, bg: '#FFF5EE' },
+  { icon: '📚', title: 'Essay Assignment — Grade 9-B',  meta: `Submitted ${relDateShort(-2)} · 28 papers pending`, bg: '#f5f3ff' },
+  { icon: '🎙️', title: 'Speaking Evaluation — Club',    meta: `Recorded ${relDateShort(-1)} · 18 audio clips`,     bg: '#f0fdf4' },
 ];
 
 // ── States ──────────────────────────────────────────────────────────────────

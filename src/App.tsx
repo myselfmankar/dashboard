@@ -4,13 +4,12 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { 
   UserCheck, BookOpen, Clock, 
-  Settings, Bell, Search, Menu, PenTool,
-  LayoutDashboard, School, Users, GraduationCap, BarChart3
+  Settings, Bell, Search, Menu,
+  LayoutDashboard, School, Users, GraduationCap, ShieldCheck
 } from 'lucide-react';
 
-import { DashboardView } from './views/DashboardView';
 import { TeachersView } from './views/TeachersView';
-import { AnalyticsView } from './views/AnalyticsView';
+import { AdminView } from './views/AdminView';
 import { ParentsView } from './views/ParentsView';
 import { TimetableView } from './views/TimetableView';
 import { CoursesView } from './views/CoursesView';
@@ -42,13 +41,12 @@ function getNavItems(role: UserRole, alertCount: number): NavItem[] {
   switch (role) {
     case 'admin':
       return [
-        { to: '/', icon: <LayoutDashboard size={16}/>, label: 'Dashboard' },
+        { to: '/', icon: <ShieldCheck size={16}/>, label: 'Admin', badge: 'NEW', activeBadge: true },
         { to: '/parents', icon: <UserCheck size={16}/>, label: 'Parents' },
         { to: '/teachers', icon: <BookOpen size={16}/>, label: 'Teachers' },
         { to: '/timetable', icon: <Clock size={16}/>, label: 'Timetable' },
         { to: '/courses', icon: <BookOpen size={16}/>, label: 'Courses' },
         ...common,
-        { to: '/analytics', icon: <PenTool size={16}/>, label: 'Pen Analytics', badge: 'NEW', activeBadge: true },
       ];
     case 'teacher':
       return [
@@ -56,12 +54,10 @@ function getNavItems(role: UserRole, alertCount: number): NavItem[] {
         { to: '/students', icon: <Users size={16}/>, label: 'Students' },
         { to: '/timetable', icon: <Clock size={16}/>, label: 'Timetable' },
         ...common,
-        { to: '/analytics', icon: <BarChart3 size={16}/>, label: 'Pen Analytics', badge: 'NEW', activeBadge: true },
       ];
     case 'parent':
       return [
         { to: '/', icon: <GraduationCap size={16}/>, label: 'My Children' },
-        { to: '/analytics', icon: <PenTool size={16}/>, label: 'Pen Analytics' },
         ...common,
       ];
   }
@@ -121,8 +117,6 @@ function PageLayout({ children, onLogout, role }: { children: React.ReactNode, o
           <nav className="flex-1 p-3 flex flex-col gap-1 overflow-y-auto">
             {navItems.map((item) => (
               <React.Fragment key={item.to + item.label}>
-                {/* Divider before Pen Analytics */}
-                {item.label === 'Pen Analytics' && <div className="h-px bg-white/10 my-2 mx-2" />}
                 <SidebarLink {...item} />
               </React.Fragment>
             ))}
@@ -192,14 +186,13 @@ function SidebarLink({ to, icon, label, badge, activeBadge }: NavItem) {
 function AdminRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<DashboardView />} />
+      <Route path="/" element={<AdminView />} />
       <Route path="/parents" element={<ParentsView />} />
       <Route path="/teachers" element={<TeachersView />} />
       <Route path="/timetable" element={<TimetableView />} />
       <Route path="/courses" element={<CoursesView />} />
       <Route path="/notifications" element={<NotificationsView />} />
       <Route path="/settings" element={<SettingsView />} />
-      <Route path="/analytics" element={<AnalyticsView />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -213,7 +206,6 @@ function TeacherRoutes() {
       <Route path="/timetable" element={<TimetableView />} />
       <Route path="/notifications" element={<NotificationsView />} />
       <Route path="/settings" element={<SettingsView />} />
-      <Route path="/analytics" element={<AnalyticsView />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -223,7 +215,6 @@ function ParentRoutes() {
   return (
     <Routes>
       <Route path="/" element={<ParentsView />} />
-      <Route path="/analytics" element={<ParentsView />} />
       <Route path="/notifications" element={<NotificationsView />} />
       <Route path="/settings" element={<SettingsView />} />
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -285,6 +276,7 @@ export default function App() {
 
       setRole(resolvedRole);
       setUser({
+        uid: firebaseUser.uid,
         name: resolvedName || ROLE_LABELS[resolvedRole],
         role: resolvedRole,
       });

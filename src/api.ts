@@ -98,6 +98,7 @@ type UserDoc = {
   // Parent-specific
   childName?: string;
   childUid?: string;
+  childUids?: string[]; // forward-compat for multiple children
   createdAt?: number;
   lastActiveAt?: number;
 };
@@ -245,26 +246,36 @@ export const api = {
     }),
 
   /**
-   * Latest at-risk evo_insights mapped to the UI alert shape.
+   * Latest evo_insights mapped to the UI alert shape, severity-bucketed:
+   *   - critical: at_risk flag
+   *   - warning : non-at_risk with mistakeCount >= 3
+   *   - info    : everything else (notable but healthy)
    */
   getAlerts: () =>
     cache.getOrFetch('alerts', TTL.day, async () => {
       try {
         const insights = await fetchEvoInsights();
-        const atRisk = insights.filter((i) => i.flag === 'at_risk').slice(0, 20);
+        const top = insights.slice(0, 30);
 
         // Join student UIDs → display names
-        const studentUids = Array.from(new Set(atRisk.map((i) => i.studentUid)));
+        const studentUids = Array.from(new Set(top.map((i) => i.studentUid)));
         const users = await fetchUsersByUid(studentUids);
 
-        return atRisk.map((i) => ({
-          id: i.id,
-          studentName: resolveDisplayName(users.get(i.studentUid), i.studentUid),
-          issue: i.evoSummary,
-          context: `${i.notebookName} • ${i.mistakeCount} mistakes`,
-          timestamp: i.timestamp?.toDate?.().toISOString() ?? '',
-          severity: 'critical' as const,
-        }));
+        return top.map((i) => {
+          const severity: import('./types').Alert['severity'] =
+            i.flag === 'at_risk'      ? 'critical'
+            : (i.mistakeCount ?? 0) >= 3 ? 'warning'
+            :                              'info';
+          return {
+            id: i.id,
+            studentUid: i.studentUid,
+            studentName: resolveDisplayName(users.get(i.studentUid), i.studentUid),
+            issue: i.evoSummary,
+            context: `${i.notebookName} \u2022 ${i.mistakeCount} mistakes`,
+            timestamp: i.timestamp?.toDate?.().toISOString() ?? '',
+            severity,
+          };
+        });
       } catch (err) {
         console.error('getAlerts failed, using empty fallback', err);
         return FALLBACK.alerts;
@@ -414,6 +425,64 @@ export const api = {
     }),
 
   /**
+   * Children for a given parent uid. Returns HeatmapStudent[] with the same
+   * risk/score scoring as `getStudentsWithRisk` so the parent dashboard can
+   * reuse the same components (StudentInlinePreview, StudentDetailModal).
+   *
+   * Source of truth: `users/{parentUid}.childUids` (preferred, array) or
+   * `users/{parentUid}.childUid` (legacy, single).
+   */
+  getChildrenForParent: (parentUid: string) =>
+    cache.getOrFetch(`childrenFor:${parentUid}`, TTL.day, async () => {
+      try {
+        const parentSnap = await getDocs(
+          query(collection(firestore, 'users'), where('__name__', '==', parentUid))
+        );
+        const parent = parentSnap.docs[0]?.data() as UserDoc | undefined;
+
+        const childUids = Array.from(new Set([
+          ...(parent?.childUids ?? []),
+          ...(parent?.childUid ? [parent.childUid] : []),
+        ])).filter(Boolean);
+
+        // Reuse the school-wide heatmap result and filter — keeps scoring
+        // consistent and avoids duplicating logic.
+        const all = await api.getStudentsWithRisk();
+
+        // ── DEMO_FALLBACK_START ────────────────────────────────────────────
+        // No parent->child linkage in Firestore yet. Until the schema lands
+        // (`users/{parentUid}.childUids`), fall back to the first 2 students
+        // from the school heatmap so the Parent portal is demo-able.
+        // To remove: delete this block; the function will then return [] and
+        // ParentsView will show its "No children linked" empty state.
+        if (childUids.length === 0) {
+          return all.slice(0, 2);
+        }
+        // ── DEMO_FALLBACK_END ──────────────────────────────────────────────
+
+        const byUid = new Map(all.map((s) => [s.uid, s]));
+
+        // Fetch child user docs to fill in names for any missing from heatmap.
+        const childUsers = await fetchUsersByUid(childUids);
+
+        return childUids.map((uid) => {
+          const fromHeatmap = byUid.get(uid);
+          if (fromHeatmap) return fromHeatmap;
+          const u = childUsers.get(uid);
+          return {
+            uid,
+            name: resolveDisplayName(u, uid),
+            risk: 0 as const,
+            score: 75,
+          };
+        });
+      } catch (err) {
+        console.error('getChildrenForParent failed', err);
+        return [];
+      }
+    }),
+
+  /**
    * Non-teaching staff.
    * FIXME_SCHEMA_EMPLOYEES: no `employees` collection. Ask backend to add one
    * (or a `role: "staff"` convention on `users`).
@@ -421,6 +490,38 @@ export const api = {
   getEmployees: () =>
     cache.getOrFetch('employees', TTL.day, async () => {
       return [];
+    }),
+
+  /**
+   * Class schedule for the teacher KPI drill-down. Returns class summaries
+   * with student counts. Schema gap: `classes` doesn't store explicit
+   * meeting days/time yet — derive a deterministic placeholder from the
+   * class id so the demo is stable.
+   */
+  getTeacherClasses: () =>
+    cache.getOrFetch('teacherClasses', TTL.day, async () => {
+      try {
+        const classes = await fetchClasses();
+        const DAYS = [
+          'Mon & Wed', 'Tue & Thu', 'Mon & Fri',
+          'Wed & Fri', 'Thursday', 'Tuesday',
+        ];
+        const TIMES = [
+          '9:00 AM', '10:00 AM', '11:00 AM',
+          '9:00 AM', '2:00 PM', '3:00 PM',
+        ];
+        return classes.map((c, i) => ({
+          classId: c.id,
+          className: c.className ?? '—',
+          subject: c.subject ?? '—',
+          students: c.studentIds?.length ?? 0,
+          days: DAYS[i % DAYS.length],
+          time: TIMES[i % TIMES.length],
+        }));
+      } catch (err) {
+        console.error('getTeacherClasses failed', err);
+        return [];
+      }
     }),
 
   /**

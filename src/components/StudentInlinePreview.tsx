@@ -17,7 +17,7 @@ import { api } from '../api';
 interface InlinePreviewProps {
   uid: string;
   onViewMore: () => void;
-  onClose: () => void;
+  onClose?: () => void;
 }
 
 const TIER_META = {
@@ -92,11 +92,13 @@ export function StudentInlinePreview({ uid, onViewMore, onClose }: InlinePreview
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: tier.dot }} />
           {tier.label}
         </div>
-        <button
-          onClick={onClose}
-          aria-label="Close preview"
-          className="w-7 h-7 rounded-md bg-s100 hover:bg-s200 text-s500 text-base shrink-0 flex items-center justify-center"
-        >×</button>
+        {onClose && (
+          <button
+            onClick={onClose}
+            aria-label="Close preview"
+            className="w-7 h-7 rounded-md bg-s100 hover:bg-s200 text-s500 text-base shrink-0 flex items-center justify-center"
+          >×</button>
+        )}
       </div>
 
       {/* Section label */}

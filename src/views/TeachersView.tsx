@@ -2,18 +2,24 @@ import { useState, useEffect } from 'react';
 import { BookOpen, Users, TrendingUp, ClipboardList } from 'lucide-react';
 import { KpiItem } from '../components/KpiItem';
 import { HeatmapWithInsights } from '../components/HeatmapWithInsights';
+import { TeacherKpiModals, type TeacherKpi } from '../components/TeacherKpiModals';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { usePrewarmAiCache } from '../lib/usePrewarmAiCache';
 import type { HeatmapStudent } from '../types';
 
 export function TeachersView() {
   const { user } = useAuth();
   const firstName = user?.name?.split(' ')[0] ?? 'Teacher';
   const [students, setStudents] = useState<HeatmapStudent[]>([]);
+  const [openKpi, setOpenKpi] = useState<TeacherKpi | null>(null);
 
   useEffect(() => {
     api.getStudentsWithRisk().then(setStudents).catch(console.error);
   }, []);
+
+  // Pre-warm the AI cache so demo clicks open instantly.
+  usePrewarmAiCache(students);
 
   const avgScore = students.length > 0
     ? `${Math.round(students.reduce((s, x) => s + x.score, 0) / students.length)}%`
@@ -60,13 +66,15 @@ export function TeachersView() {
           </div>
         </div>
 
-        {/* Teacher KPI Cards */}
+        {/* Teacher KPI Cards — click to drill down */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiItem title="My Classes" mtc="blue" value={1} trend="This term" icon={<BookOpen/>} />
-          <KpiItem title="Attendance Rate" mtc="green" value="N/A" trend="No data yet" icon={<Users/>} />
-          <KpiItem title="Avg Score" mtc="purple" value={avgScore} trend="Current term" icon={<TrendingUp/>} />
-          <KpiItem title="Pending Reviews" mtc="amber" value={pendingReviews} trend="Action needed" icon={<ClipboardList/>} isDown />
+          <KpiItem title="My Classes" mtc="blue" value={1} trend="This term" icon={<BookOpen/>} onClick={() => setOpenKpi('classes')} />
+          <KpiItem title="Attendance Rate" mtc="green" value="N/A" trend="No data yet" icon={<Users/>} onClick={() => setOpenKpi('attendance')} />
+          <KpiItem title="Avg Score" mtc="purple" value={avgScore} trend="Current term" icon={<TrendingUp/>} onClick={() => setOpenKpi('scores')} />
+          <KpiItem title="Pending Reviews" mtc="amber" value={pendingReviews} trend="Action needed" icon={<ClipboardList/>} isDown onClick={() => setOpenKpi('reviews')} />
         </div>
+
+        <TeacherKpiModals active={openKpi} students={students} onClose={() => setOpenKpi(null)} />
 
         {/* Heatmap & Insights — independent reusable widget */}
         <HeatmapWithInsights

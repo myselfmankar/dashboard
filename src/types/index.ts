@@ -3,6 +3,7 @@
 export type UserRole = 'admin' | 'teacher' | 'parent';
 
 export interface AuthUser {
+  uid?: string;
   name: string;
   role: UserRole;
   avatar?: string;
@@ -22,6 +23,7 @@ export interface Kpi {
 
 export interface Alert {
   id: string;
+  studentUid?: string;
   studentName: string;
   issue: string;
   context: string;

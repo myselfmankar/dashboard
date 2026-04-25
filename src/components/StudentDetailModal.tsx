@@ -58,6 +58,9 @@ export function StudentDetailModal({ uid, onClose }: StudentDetailModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aiRefreshing, setAiRefreshing] = useState(false);
+  // Set when a Gemini refresh fails after a cached result was already shown.
+  // Surfaces a "Showing cached" tag so the user knows the insight is stale.
+  const [aiStale, setAiStale] = useState(false);
 
   // Close on Escape.
   useEffect(() => {
@@ -104,6 +107,7 @@ export function StudentDetailModal({ uid, onClose }: StudentDetailModalProps) {
     if (!import.meta.env.VITE_GEMINI_API_KEY) return;
     if (force) clearRealtimeAiCache(studentUid);
     setAiRefreshing(true);
+    setAiStale(false);
     try {
       const fresh = await generateRealtimeAi(studentUid, {
         name: base.name,
@@ -125,6 +129,7 @@ export function StudentDetailModal({ uid, onClose }: StudentDetailModalProps) {
       });
     } catch (err) {
       console.warn('[StudentDetail] real-time AI failed, keeping cached', err);
+      if (!isCancelled()) setAiStale(true);
     } finally {
       if (!isCancelled()) setAiRefreshing(false);
     }
@@ -170,7 +175,7 @@ export function StudentDetailModal({ uid, onClose }: StudentDetailModalProps) {
         {loading && <PanelSkeleton onClose={onClose} />}
         {error && <PanelError message={error} onClose={onClose} />}
         {!loading && !error && data && (
-          <PanelContent data={data} aiRefreshing={aiRefreshing} onClose={onClose} onRegenerate={handleRegenerate} />
+          <PanelContent data={data} aiRefreshing={aiRefreshing} aiStale={aiStale} onClose={onClose} onRegenerate={handleRegenerate} />
         )}
       </aside>
       <style>{`
@@ -190,8 +195,8 @@ export function StudentDetailModal({ uid, onClose }: StudentDetailModalProps) {
 
 // ── Panel content ───────────────────────────────────────────────────────────
 
-function PanelContent({ data, aiRefreshing, onClose, onRegenerate }: {
-  data: StudentDetail; aiRefreshing: boolean; onClose: () => void; onRegenerate: () => void;
+function PanelContent({ data, aiRefreshing, aiStale, onClose, onRegenerate }: {
+  data: StudentDetail; aiRefreshing: boolean; aiStale: boolean; onClose: () => void; onRegenerate: () => void;
 }) {
   const tier = TIER_META[data.tier];
   const initials = data.name.split(' ').map((s) => s[0]).slice(0, 2).join('').toUpperCase();
@@ -268,6 +273,20 @@ function PanelContent({ data, aiRefreshing, onClose, onRegenerate }: {
               color: '#F47B20', textTransform: 'uppercase', letterSpacing: '0.1em',
             }}>NOTIVO AI</div>
             {aiRefreshing && <Spinner />}
+            {aiStale && !aiRefreshing && (
+              <span
+                title="Live refresh failed — this insight is from cache"
+                style={{
+                  fontFamily: '"Roboto Mono", monospace', fontSize: 10, fontWeight: 700,
+                  color: '#92400e', background: '#fef3c7', border: '1px solid #fde68a',
+                  padding: '2px 8px', borderRadius: 999, textTransform: 'uppercase',
+                  letterSpacing: '0.08em', display: 'inline-flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#f59e0b' }} />
+                Showing cached
+              </span>
+            )}
             <button
               onClick={onRegenerate}
               disabled={aiRefreshing}

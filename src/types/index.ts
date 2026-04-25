@@ -3,6 +3,7 @@
 export type UserRole = 'admin' | 'teacher' | 'parent';
 
 export interface AuthUser {
+  uid?: string;
   name: string;
   role: UserRole;
   avatar?: string;
@@ -22,6 +23,7 @@ export interface Kpi {
 
 export interface Alert {
   id: string;
+  studentUid?: string;
   studentName: string;
   issue: string;
   context: string;
@@ -78,6 +80,7 @@ export interface WeakConcept {
 }
 
 export interface HeatmapStudent {
+  uid?: string;            // Firestore studentUid — needed to open detail modal
   name: string;
   risk: 0 | 1 | 2 | 3 | 4 | 5;
   score: number;
@@ -86,6 +89,61 @@ export interface HeatmapStudent {
   speedDrop?: number;
   pages?: number;
   insight?: string;
+}
+
+// ── Student Detail Modal ──
+
+export interface SubjectScore {
+  subject: string;
+  score: number; // 0–100, derived from comprehensionScore in evo_insights
+}
+
+export interface WeakTopic {
+  topic: string;
+  subject: string;
+  severity: 'HIGH' | 'MEDIUM' | 'LOW';
+  desc: string;
+}
+
+export interface ImprovementTip {
+  title: string;        // short action label, e.g. "Algebra drills"
+  body: string;         // 1–2 sentence elaboration
+  kind: 'practice' | 'concept' | 'support' | 'habit';
+}
+
+export interface PenBehaviour {
+  totalHesitation: string; // formatted "M:SS"
+  crossOuts: number;
+  speedDropPct: number;    // negative integer, e.g. -72
+  pagesWritten: number;
+  writingPct: number;      // session timeline %, sums to 100
+  hesitationPct: number;
+  redoPct: number;
+}
+
+export interface AlertEntry {
+  text: string;
+  severity: 'HIGH' | 'MEDIUM' | 'LOW';
+  ago: string;
+}
+
+export interface StudentDetail {
+  uid: string;
+  name: string;
+  roll: string;
+  className: string;
+  penId: string;                       // synthetic, e.g. "NTV-1013"
+  tier: 'best' | 'good' | 'risk';
+  overall: number;                     // 0–100, mean of subject scores
+  subjects: SubjectScore[];
+  weakTopics: WeakTopic[];             // sorted by severity desc
+  goodAt: string[];                    // 2–3 strengths (LLM-generated)
+  improvementPlan: ImprovementTip[];   // 3–4 actionable tips (LLM-generated)
+  evoSummary: string;                  // 1–2 sentence narrative (LLM-generated)
+  penBehaviour: PenBehaviour;
+  alerts: AlertEntry[];
+  generatedAt: string;                 // ISO timestamp of last AI run
+  modelVersion: string;                // e.g. "gemini-2.5-flash" or "template-v1"
 }
 
 export interface Course {

@@ -70,7 +70,18 @@ type EvoInsightDoc = {
   evoSummary: string;
   errorTags: string[];
   mistakeCount: number;
+  writingSpeed?: number;
+  comprehensionScore?: number; // 0–100 — primary signal for subject score
   timestamp: Timestamp;
+};
+
+type AiInsightDoc = {
+  studentUid: string;
+  goodAt: string[];
+  improvementPlan: Array<{ title: string; body: string; kind: 'practice' | 'concept' | 'support' | 'habit' }>;
+  evoSummary: string;
+  generatedAt: Timestamp | number;
+  modelVersion: string;
 };
 
 type UserDoc = {
@@ -87,6 +98,7 @@ type UserDoc = {
   // Parent-specific
   childName?: string;
   childUid?: string;
+  childUids?: string[]; // forward-compat for multiple children
   createdAt?: number;
   lastActiveAt?: number;
 };
@@ -234,26 +246,36 @@ export const api = {
     }),
 
   /**
-   * Latest at-risk evo_insights mapped to the UI alert shape.
+   * Latest evo_insights mapped to the UI alert shape, severity-bucketed:
+   *   - critical: at_risk flag
+   *   - warning : non-at_risk with mistakeCount >= 3
+   *   - info    : everything else (notable but healthy)
    */
   getAlerts: () =>
     cache.getOrFetch('alerts', TTL.day, async () => {
       try {
         const insights = await fetchEvoInsights();
-        const atRisk = insights.filter((i) => i.flag === 'at_risk').slice(0, 20);
+        const top = insights.slice(0, 30);
 
         // Join student UIDs → display names
-        const studentUids = Array.from(new Set(atRisk.map((i) => i.studentUid)));
+        const studentUids = Array.from(new Set(top.map((i) => i.studentUid)));
         const users = await fetchUsersByUid(studentUids);
 
-        return atRisk.map((i) => ({
-          id: i.id,
-          studentName: resolveDisplayName(users.get(i.studentUid), i.studentUid),
-          issue: i.evoSummary,
-          context: `${i.notebookName} • ${i.mistakeCount} mistakes`,
-          timestamp: i.timestamp?.toDate?.().toISOString() ?? '',
-          severity: 'critical' as const,
-        }));
+        return top.map((i) => {
+          const severity: import('./types').Alert['severity'] =
+            i.flag === 'at_risk'      ? 'critical'
+            : (i.mistakeCount ?? 0) >= 3 ? 'warning'
+            :                              'info';
+          return {
+            id: i.id,
+            studentUid: i.studentUid,
+            studentName: resolveDisplayName(users.get(i.studentUid), i.studentUid),
+            issue: i.evoSummary,
+            context: `${i.notebookName} \u2022 ${i.mistakeCount} mistakes`,
+            timestamp: i.timestamp?.toDate?.().toISOString() ?? '',
+            severity,
+          };
+        });
       } catch (err) {
         console.error('getAlerts failed, using empty fallback', err);
         return FALLBACK.alerts;
@@ -392,12 +414,70 @@ export const api = {
           else if (score >= 50 || atRisk <= 2) risk = 3;
           else if (score >= 40 || atRisk <= 3) risk = 4;
           else risk = 5;
-          return { name, risk, score };
+          return { uid, name, risk, score };
         });
 
         return result.sort((a, b) => b.risk - a.risk || a.score - b.score);
       } catch (err) {
         console.error('getStudentsWithRisk failed', err);
+        return [];
+      }
+    }),
+
+  /**
+   * Children for a given parent uid. Returns HeatmapStudent[] with the same
+   * risk/score scoring as `getStudentsWithRisk` so the parent dashboard can
+   * reuse the same components (StudentInlinePreview, StudentDetailModal).
+   *
+   * Source of truth: `users/{parentUid}.childUids` (preferred, array) or
+   * `users/{parentUid}.childUid` (legacy, single).
+   */
+  getChildrenForParent: (parentUid: string) =>
+    cache.getOrFetch(`childrenFor:${parentUid}`, TTL.day, async () => {
+      try {
+        const parentSnap = await getDocs(
+          query(collection(firestore, 'users'), where('__name__', '==', parentUid))
+        );
+        const parent = parentSnap.docs[0]?.data() as UserDoc | undefined;
+
+        const childUids = Array.from(new Set([
+          ...(parent?.childUids ?? []),
+          ...(parent?.childUid ? [parent.childUid] : []),
+        ])).filter(Boolean);
+
+        // Reuse the school-wide heatmap result and filter — keeps scoring
+        // consistent and avoids duplicating logic.
+        const all = await api.getStudentsWithRisk();
+
+        // ── DEMO_FALLBACK_START ────────────────────────────────────────────
+        // No parent->child linkage in Firestore yet. Until the schema lands
+        // (`users/{parentUid}.childUids`), fall back to the first 2 students
+        // from the school heatmap so the Parent portal is demo-able.
+        // To remove: delete this block; the function will then return [] and
+        // ParentsView will show its "No children linked" empty state.
+        if (childUids.length === 0) {
+          return all.slice(0, 2);
+        }
+        // ── DEMO_FALLBACK_END ──────────────────────────────────────────────
+
+        const byUid = new Map(all.map((s) => [s.uid, s]));
+
+        // Fetch child user docs to fill in names for any missing from heatmap.
+        const childUsers = await fetchUsersByUid(childUids);
+
+        return childUids.map((uid) => {
+          const fromHeatmap = byUid.get(uid);
+          if (fromHeatmap) return fromHeatmap;
+          const u = childUsers.get(uid);
+          return {
+            uid,
+            name: resolveDisplayName(u, uid),
+            risk: 0 as const,
+            score: 75,
+          };
+        });
+      } catch (err) {
+        console.error('getChildrenForParent failed', err);
         return [];
       }
     }),
@@ -410,6 +490,38 @@ export const api = {
   getEmployees: () =>
     cache.getOrFetch('employees', TTL.day, async () => {
       return [];
+    }),
+
+  /**
+   * Class schedule for the teacher KPI drill-down. Returns class summaries
+   * with student counts. Schema gap: `classes` doesn't store explicit
+   * meeting days/time yet — derive a deterministic placeholder from the
+   * class id so the demo is stable.
+   */
+  getTeacherClasses: () =>
+    cache.getOrFetch('teacherClasses', TTL.day, async () => {
+      try {
+        const classes = await fetchClasses();
+        const DAYS = [
+          'Mon & Wed', 'Tue & Thu', 'Mon & Fri',
+          'Wed & Fri', 'Thursday', 'Tuesday',
+        ];
+        const TIMES = [
+          '9:00 AM', '10:00 AM', '11:00 AM',
+          '9:00 AM', '2:00 PM', '3:00 PM',
+        ];
+        return classes.map((c, i) => ({
+          classId: c.id,
+          className: c.className ?? '—',
+          subject: c.subject ?? '—',
+          students: c.studentIds?.length ?? 0,
+          days: DAYS[i % DAYS.length],
+          time: TIMES[i % TIMES.length],
+        }));
+      } catch (err) {
+        console.error('getTeacherClasses failed', err);
+        return [];
+      }
     }),
 
   /**
@@ -558,5 +670,335 @@ export const api = {
 
       return { atRisk, needingAttention, avgClassScore, activeSessions };
     }),
+
+  /**
+   * Per-class aggregate view for the Courses page.
+   *
+   * For every class in this institute, computes:
+   *   - enrollments    (studentIds.length)
+   *   - atRiskCount    (distinct students flagged at_risk in evo_insights)
+   *   - avgScore       (mean comprehensionScore across the class's insights;
+   *                     falls back to severity-derived score)
+   *   - topWeakTopic   (most-flagged HIGH/MEDIUM topic for the class)
+   *   - teacherName / initials
+   *
+   * Returns a stable shape for CoursesView. Cached for one day.
+   */
+  getCoursesOverview: () =>
+    cache.getOrFetch('coursesOverview', TTL.day, async () => {
+      try {
+        const [classes, insights] = await Promise.all([
+          fetchClasses(),
+          fetchEvoInsights(),
+        ]);
+        const teacherUids = Array.from(new Set(classes.map((c) => c.teacherUid).filter(Boolean)));
+        const users = await fetchUsersByUid(teacherUids);
+
+        // Group insights by classId for fast per-class aggregation.
+        const byClass = new Map<string, EvoInsightDoc[]>();
+        for (const ins of insights) {
+          const arr = byClass.get(ins.classId) ?? [];
+          arr.push(ins);
+          byClass.set(ins.classId, arr);
+        }
+
+        return classes.map((c) => {
+          const classInsights = byClass.get(c.id) ?? [];
+
+          // Avg comprehensionScore (or fallback)
+          let scoreSum = 0; let scoreN = 0;
+          for (const i of classInsights) {
+            const s = typeof i.comprehensionScore === 'number'
+              ? i.comprehensionScore
+              : 100 - Math.min(100, (i.mistakeCount ?? 0) * 8);
+            scoreSum += s; scoreN++;
+          }
+          const avgScore = scoreN > 0 ? Math.round(scoreSum / scoreN) : 0;
+
+          // Distinct at-risk students within the class
+          const atRiskUids = new Set(
+            classInsights.filter((i) => i.flag === 'at_risk').map((i) => i.studentUid),
+          );
+
+          // Top weak topic for this class
+          const topicHits = new Map<string, number>();
+          for (const i of classInsights) {
+            for (const raw of i.errorTags ?? []) {
+              const { topic, severity } = parseErrorTag(raw);
+              if (!topic || severity === 'LOW' || severity === 'UNKNOWN') continue;
+              topicHits.set(topic, (topicHits.get(topic) ?? 0) + (severity === 'HIGH' ? 2 : 1));
+            }
+          }
+          const topWeakTopic = Array.from(topicHits.entries())
+            .sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
+
+          const teacher = users.get(c.teacherUid);
+          const teacherName = resolveDisplayName(teacher, c.teacherUid || '—');
+          const initials = teacherName
+            .split(/\s+/).map((s) => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '–';
+
+          return {
+            classId: c.id,
+            className: c.className ?? '—',
+            subject: c.subject ?? '—',
+            teacherName,
+            teacherInitials: initials,
+            enrollments: c.studentIds?.length ?? 0,
+            atRiskCount: atRiskUids.size,
+            avgScore,
+            topWeakTopic,
+            sessionsLogged: classInsights.length,
+          };
+        });
+      } catch (err) {
+        console.error('getCoursesOverview failed', err);
+        return [];
+      }
+    }),
+
+  /**
+   * Detailed view for a single student — powers the Student Detail Modal.
+   *
+   * Combines two data sources:
+   *   1. **Hard data from `evo_insights`** (one doc per student × class):
+   *      - subject scores derived from `comprehensionScore`
+   *      - weak topics parsed from `errorTags[]`
+   *      - tier (best/good/risk) from overall comprehension
+   *   2. **AI-generated copy from `ai_insights/{uid}`**:
+   *      - `goodAt[]` strengths
+   *      - `improvementPlan[]` actionable tips
+   *      - `evoSummary` narrative
+   *
+   * The AI doc is pre-computed by `scripts/generate-ai-insights.ts`. If the
+   * doc is missing, we fall back to deterministic template copy so the modal
+   * still renders meaningful content.
+   *
+   * Cached per-uid for one day.
+   */
+  getStudentDetail: (studentUid: string) =>
+    cache.getOrFetch(`studentDetail:${studentUid}`, TTL.day, async () => {
+      // Pull everything in parallel.
+      const [userSnap, insightsSnap, classesSnap, aiSnap] = await Promise.allSettled([
+        getDocs(query(collection(firestore, 'users'), where('__name__', '==', studentUid))),
+        getDocs(query(collection(firestore, 'evo_insights'), where('studentUid', '==', studentUid))),
+        getDocs(query(collection(firestore, 'classes'), where('instituteId', '==', _instituteId))),
+        getDocs(query(collection(firestore, 'ai_insights'), where('__name__', '==', studentUid))),
+      ]);
+
+      const userDoc = userSnap.status === 'fulfilled' ? userSnap.value.docs[0]?.data() as UserDoc | undefined : undefined;
+      const insights = insightsSnap.status === 'fulfilled'
+        ? insightsSnap.value.docs.map((d) => d.data() as EvoInsightDoc)
+        : [];
+      const classes = classesSnap.status === 'fulfilled'
+        ? classesSnap.value.docs.map((d) => ({ id: d.id, ...(d.data() as ClassDoc) }))
+        : [];
+      const aiDoc = aiSnap.status === 'fulfilled' ? aiSnap.value.docs[0]?.data() as AiInsightDoc | undefined : undefined;
+
+      const name = resolveDisplayName(userDoc, studentUid);
+
+      // ── Subject scores: one row per class the student belongs to ──────
+      const classById = new Map(classes.map((c) => [c.id, c]));
+      const subjectMap = new Map<string, number[]>(); // subject → comprehensionScores
+      for (const ins of insights) {
+        const cls = classById.get(ins.classId);
+        const subject = cls?.subject ?? ins.classId;
+        if (!subject) continue;
+        const score = typeof ins.comprehensionScore === 'number'
+          ? ins.comprehensionScore
+          : 100 - Math.min(100, (ins.mistakeCount ?? 0) * 8); // crude fallback
+        const arr = subjectMap.get(subject) ?? [];
+        arr.push(score);
+        subjectMap.set(subject, arr);
+      }
+      const subjects = Array.from(subjectMap.entries()).map(([subject, scores]) => ({
+        subject,
+        score: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+      }));
+
+      const overall = subjects.length > 0
+        ? Math.round(subjects.reduce((s, x) => s + x.score, 0) / subjects.length)
+        : 0;
+
+      // ── Weak topics: aggregate errorTags HIGH/MEDIUM across classes ──
+      const weakTopics: import('./types').WeakTopic[] = [];
+      for (const ins of insights) {
+        const cls = classById.get(ins.classId);
+        const subject = cls?.subject ?? '';
+        for (const raw of ins.errorTags ?? []) {
+          const { topic, severity } = parseErrorTag(raw);
+          if (severity === 'LOW' || severity === 'UNKNOWN') continue; // only show HIGH/MEDIUM in modal
+          weakTopics.push({
+            topic,
+            subject,
+            severity,
+            // Use evoSummary as desc context — better than nothing.
+            desc: ins.evoSummary || `Difficulty observed in ${topic.toLowerCase()}.`,
+          });
+        }
+      }
+      // Sort: HIGH first, then MEDIUM. Dedupe by topic+subject.
+      const seen = new Set<string>();
+      const dedupedWeakTopics = weakTopics
+        .sort((a, b) => (a.severity === 'HIGH' ? -1 : 1) - (b.severity === 'HIGH' ? -1 : 1))
+        .filter((w) => {
+          const key = `${w.subject}::${w.topic}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+      // ── Tier from overall ──
+      const tier: 'best' | 'good' | 'risk' =
+        overall >= 80 ? 'best' : overall >= 60 ? 'good' : 'risk';
+
+      // ── AI-generated copy (fallback to template if missing) ──
+      const goodAt: string[] = aiDoc?.goodAt ?? deriveTemplateGoodAt(subjects);
+      const improvementPlan = aiDoc?.improvementPlan ?? deriveTemplatePlan(dedupedWeakTopics);
+      const evoSummary = aiDoc?.evoSummary
+        ?? insights[0]?.evoSummary
+        ?? 'Student profile under review. Run scripts/generate-ai-insights.ts for personalised insight.';
+      const generatedAt = aiDoc?.generatedAt
+        ? (typeof aiDoc.generatedAt === 'number'
+            ? new Date(aiDoc.generatedAt).toISOString()
+            : (aiDoc.generatedAt as Timestamp).toDate?.().toISOString() ?? '')
+        : '';
+      const modelVersion = aiDoc?.modelVersion ?? 'template-v1';
+
+      // FIXME_SCHEMA_ROLL: no roll number stored — fake from class index.
+      const homeClass = classes.find((c) => (c.studentIds ?? []).includes(studentUid));
+      const roll = homeClass
+        ? `${(homeClass.studentIds ?? []).indexOf(studentUid) + 1}`.padStart(3, '0')
+        : '—';
+
+      // ── Pen behaviour KPIs (derived from evo_insights) ──
+      const penBehaviour = derivePenBehaviour(studentUid, insights, overall);
+      const penId = derivePenId(studentUid);
+
+      // ── Live alerts: synthesize from student's recent evo_insights ──
+      const alerts = deriveAlerts(insights, classById);
+
+      return {
+        uid: studentUid,
+        name,
+        roll,
+        className: homeClass?.className ?? '',
+        penId,
+        tier,
+        overall,
+        subjects: subjects.sort((a, b) => b.score - a.score),
+        weakTopics: dedupedWeakTopics,
+        goodAt,
+        improvementPlan,
+        evoSummary,
+        penBehaviour,
+        alerts,
+        generatedAt,
+        modelVersion,
+      } satisfies import('./types').StudentDetail;
+    }),
 };
+
+// ── Pen behaviour derivation ────────────────────────────────────────────────
+// Schema gap: penSessions doesn't store hesitation/cross-out/speed.
+// We derive plausible numbers from evo_insights so the UI tells a coherent
+// story. Tier-aware: at-risk students show worse pen behaviour.
+function derivePenBehaviour(
+  uid: string,
+  insights: EvoInsightDoc[],
+  overall: number,
+): import('./types').PenBehaviour {
+  const totalMistakes = insights.reduce((s, i) => s + (i.mistakeCount ?? 0), 0);
+  const seed = uidHash(uid);
+
+  // Cross-outs ≈ mistake count (fallback to seeded 5–25).
+  const crossOuts = totalMistakes > 0 ? totalMistakes : 5 + (seed % 20);
+
+  // Hesitation: scales inverse to overall score. 100% → 1:00, 0% → 9:30.
+  const hesitationSec = Math.round((100 - overall) * 5 + 60 + (seed % 40));
+  const totalHesitation = `${Math.floor(hesitationSec / 60)}:${String(hesitationSec % 60).padStart(2, '0')}`;
+
+  // Speed drop: more negative for at-risk students.
+  const speedDropPct = -Math.min(95, Math.round((100 - overall) * 0.85 + (seed % 10)));
+
+  // Pages: 1–4 based on sessions / insight count.
+  const pagesWritten = Math.max(1, Math.min(4, Math.round(insights.length / 2) || 1));
+
+  // Session timeline: writing dominates for top performers, re-do for at-risk.
+  let writingPct: number, hesitationPct: number, redoPct: number;
+  if (overall >= 80) {
+    writingPct = 70; hesitationPct = 20; redoPct = 10;
+  } else if (overall >= 60) {
+    writingPct = 50; hesitationPct = 30; redoPct = 20;
+  } else {
+    writingPct = 30; hesitationPct = 30; redoPct = 40;
+  }
+
+  return { totalHesitation, crossOuts, speedDropPct, pagesWritten, writingPct, hesitationPct, redoPct };
+}
+
+function derivePenId(uid: string): string {
+  // Stable 4-digit id from uid hash.
+  return `NTV-${1000 + (uidHash(uid) % 9000)}`;
+}
+
+function uidHash(uid: string): number {
+  let h = 0;
+  for (let i = 0; i < uid.length; i++) h = ((h << 5) - h + uid.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+function deriveAlerts(
+  insights: EvoInsightDoc[],
+  classById: Map<string, ClassDoc & { id: string }>,
+): import('./types').AlertEntry[] {
+  const out: import('./types').AlertEntry[] = [];
+  const sorted = [...insights].sort((a, b) => {
+    const at = a.timestamp?.toMillis?.() ?? 0;
+    const bt = b.timestamp?.toMillis?.() ?? 0;
+    return bt - at;
+  });
+  for (let i = 0; i < Math.min(3, sorted.length); i++) {
+    const ins = sorted[i];
+    const cls = classById.get(ins.classId);
+    const ago = relativeAgo(ins.timestamp?.toMillis?.() ?? Date.now());
+    const sev: 'HIGH' | 'MEDIUM' | 'LOW' =
+      (ins.mistakeCount ?? 0) >= 8 ? 'HIGH' : (ins.mistakeCount ?? 0) >= 4 ? 'MEDIUM' : 'LOW';
+    const subject = cls?.subject ?? '';
+    const text = ins.evoSummary
+      ? ins.evoSummary
+      : `${ins.mistakeCount ?? 0} mistakes in ${subject || 'recent session'}.`;
+    out.push({ text, severity: sev, ago });
+  }
+  return out;
+}
+
+function relativeAgo(ms: number): string {
+  const diff = Math.max(0, Date.now() - ms);
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m} min ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+// ── Template fallbacks (used when ai_insights doc is missing) ───────────────
+function deriveTemplateGoodAt(subjects: Array<{ subject: string; score: number }>): string[] {
+  const top = subjects.filter((s) => s.score >= 75).sort((a, b) => b.score - a.score).slice(0, 3);
+  if (top.length === 0) return ['Showing consistent effort across all subjects.'];
+  return top.map((s) => `Strong performance in ${s.subject} (${s.score}%).`);
+}
+
+function deriveTemplatePlan(weakTopics: Array<{ topic: string; subject: string; severity: string }>) {
+  if (weakTopics.length === 0) {
+    return [
+      { title: 'Maintain consistency', body: 'Keep practising daily to retain current performance levels.', kind: 'habit' as const },
+    ];
+  }
+  return weakTopics.slice(0, 4).map((w) => ({
+    title: `${w.topic} drills`,
+    body: `Spend 10–15 minutes daily on targeted ${w.topic.toLowerCase()} practice in ${w.subject}.`,
+    kind: 'practice' as const,
+  }));
+}
 

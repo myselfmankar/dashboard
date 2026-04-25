@@ -4,13 +4,12 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { 
   UserCheck, BookOpen, Clock, 
-  Settings, Bell, Search, Menu, PenTool,
-  LayoutDashboard, School, Users, GraduationCap, BarChart3
+  Settings, Bell, Menu,
+  LayoutDashboard, School, Users, GraduationCap, ShieldCheck
 } from 'lucide-react';
 
-import { DashboardView } from './views/DashboardView';
 import { TeachersView } from './views/TeachersView';
-import { AnalyticsView } from './views/AnalyticsView';
+import { AdminView } from './views/AdminView';
 import { ParentsView } from './views/ParentsView';
 import { TimetableView } from './views/TimetableView';
 import { CoursesView } from './views/CoursesView';
@@ -42,13 +41,12 @@ function getNavItems(role: UserRole, alertCount: number): NavItem[] {
   switch (role) {
     case 'admin':
       return [
-        { to: '/', icon: <LayoutDashboard size={16}/>, label: 'Dashboard' },
+        { to: '/', icon: <ShieldCheck size={16}/>, label: 'Admin', badge: 'NEW', activeBadge: true },
         { to: '/parents', icon: <UserCheck size={16}/>, label: 'Parents' },
         { to: '/teachers', icon: <BookOpen size={16}/>, label: 'Teachers' },
         { to: '/timetable', icon: <Clock size={16}/>, label: 'Timetable' },
         { to: '/courses', icon: <BookOpen size={16}/>, label: 'Courses' },
         ...common,
-        { to: '/analytics', icon: <PenTool size={16}/>, label: 'Pen Analytics', badge: 'NEW', activeBadge: true },
       ];
     case 'teacher':
       return [
@@ -56,12 +54,10 @@ function getNavItems(role: UserRole, alertCount: number): NavItem[] {
         { to: '/students', icon: <Users size={16}/>, label: 'Students' },
         { to: '/timetable', icon: <Clock size={16}/>, label: 'Timetable' },
         ...common,
-        { to: '/analytics', icon: <BarChart3 size={16}/>, label: 'Pen Analytics', badge: 'NEW', activeBadge: true },
       ];
     case 'parent':
       return [
         { to: '/', icon: <GraduationCap size={16}/>, label: 'My Children' },
-        { to: '/analytics', icon: <PenTool size={16}/>, label: 'Pen Analytics' },
         ...common,
       ];
   }
@@ -103,11 +99,23 @@ function PageLayout({ children, onLogout, role }: { children: React.ReactNode, o
         )}
 
         {/* SIDEBAR */}
-        <div className={`
-          absolute z-50 md:relative md:translate-x-0 top-0 left-0 h-full w-[210px] 
-          bg-[#1A1A1A]/85 backdrop-blur-2xl flex flex-col transition-transform duration-300 ease-in-out border-r border-white/10
+        <div
+          className={`
+          absolute z-50 md:relative md:translate-x-0 top-0 left-0 h-full w-[210px]
+          backdrop-blur-2xl flex flex-col transition-transform duration-300 ease-in-out border-r border-white/10
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}>
+        `}
+          style={{
+            // Deep midnight base with a warm Notivo-orange glow bleeding from
+            // top-left and bottom-right — keeps text legible while shaking off
+            // the flat-black SaaS feel.
+            backgroundImage: [
+              'radial-gradient(120% 60% at 0% 0%, rgba(244,123,32,0.22), transparent 60%)',
+              'radial-gradient(90% 50% at 100% 100%, rgba(244,123,32,0.16), transparent 65%)',
+              'linear-gradient(180deg, #1f1208 0%, #18120e 45%, #120a05 100%)',
+            ].join(', '),
+          }}
+        >
           <div className="flex items-center gap-3 py-5 px-4 border-b border-white/10">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FFAA6E] to-accent flex items-center justify-center shrink-0">
               <School className="w-5 h-5 text-white" />
@@ -121,8 +129,6 @@ function PageLayout({ children, onLogout, role }: { children: React.ReactNode, o
           <nav className="flex-1 p-3 flex flex-col gap-1 overflow-y-auto">
             {navItems.map((item) => (
               <React.Fragment key={item.to + item.label}>
-                {/* Divider before Pen Analytics */}
-                {item.label === 'Pen Analytics' && <div className="h-px bg-white/10 my-2 mx-2" />}
                 <SidebarLink {...item} />
               </React.Fragment>
             ))}
@@ -147,13 +153,8 @@ function PageLayout({ children, onLogout, role }: { children: React.ReactNode, o
             <button className="w-[34px] h-[34px] rounded-lg bg-s50 border border-s200 flex items-center justify-center md:hidden" onClick={() => setIsSidebarOpen(true)}>
               <Menu size={18} />
             </button>
-            <div className="relative flex-1 max-w-[300px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-s400" />
-              <input type="text" placeholder="Search school records..." className="w-full py-2 pr-3 pl-8 bg-s50 border border-s200 rounded-lg text-xs outline-none focus:border-accent" />
-            </div>
             <div className="ml-auto flex items-center gap-4">
-               <div className="text-[10px] font-mono text-s400 uppercase tracking-widest hidden lg:block">Notivo &copy; 2026</div>
-               <div className="w-8 h-8 rounded-full bg-s100 border border-s200 flex items-center justify-center text-s700"><Settings size={14}/></div>
+               <div className="text-[10px] font-mono text-s400 uppercase tracking-widest hidden lg:block">Notivo &copy; {new Date().getFullYear()}</div>
             </div>
           </header>
 
@@ -192,14 +193,13 @@ function SidebarLink({ to, icon, label, badge, activeBadge }: NavItem) {
 function AdminRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<DashboardView />} />
+      <Route path="/" element={<AdminView />} />
       <Route path="/parents" element={<ParentsView />} />
       <Route path="/teachers" element={<TeachersView />} />
       <Route path="/timetable" element={<TimetableView />} />
       <Route path="/courses" element={<CoursesView />} />
       <Route path="/notifications" element={<NotificationsView />} />
       <Route path="/settings" element={<SettingsView />} />
-      <Route path="/analytics" element={<AnalyticsView />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -213,7 +213,6 @@ function TeacherRoutes() {
       <Route path="/timetable" element={<TimetableView />} />
       <Route path="/notifications" element={<NotificationsView />} />
       <Route path="/settings" element={<SettingsView />} />
-      <Route path="/analytics" element={<AnalyticsView />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -223,7 +222,6 @@ function ParentRoutes() {
   return (
     <Routes>
       <Route path="/" element={<ParentsView />} />
-      <Route path="/analytics" element={<ParentsView />} />
       <Route path="/notifications" element={<NotificationsView />} />
       <Route path="/settings" element={<SettingsView />} />
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -285,6 +283,7 @@ export default function App() {
 
       setRole(resolvedRole);
       setUser({
+        uid: firebaseUser.uid,
         name: resolvedName || ROLE_LABELS[resolvedRole],
         role: resolvedRole,
       });

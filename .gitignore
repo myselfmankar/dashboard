@@ -23,4 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 
+<<<<<<< HEAD
 scripts
+.env
+
+=======
+scripts
+>>>>>>> origin/main
